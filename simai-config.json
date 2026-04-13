@@ -1,0 +1,46 @@
+{
+  "brand": "SimAI Telecom",
+  "currency": "USD",
+  "tiers": [
+    {
+      "id": "starter",
+      "name": "Starter Signal",
+      "price": 9,
+      "description": "Light personal use. Messaging, light browsing, agent access.",
+      "features": [
+        "Personal agent access",
+        "Basic bandwidth tier",
+        "Email support"
+      ]
+    },
+    {
+      "id": "pro",
+      "name": "Pro Signal",
+      "price": 29,
+      "description": "Daily operator use. Content, workflows, and agent automations.",
+      "features": [
+        "Priority agent access",
+        "Higher bandwidth tier",
+        "Workflow templates",
+        "Priority support"
+      ]
+    },
+    {
+      "id": "elite",
+      "name": "Elite Signal",
+      "price": 99,
+      "description": "Creator/operator grade. High usage and custom workflows.",
+      "features": [
+        "Unlimited agent sessions (fair use)",
+        "Highest bandwidth tier",
+        "Custom workflow setup call",
+        "Direct operator channel"
+      ]
+    }
+  ],
+  "checkout": {
+    "starter": "https://your-checkout-link/starter",
+    "pro": "https://your-checkout-link/pro",
+    "elite": "https://your-checkout-link/elite"
+  }
+}
