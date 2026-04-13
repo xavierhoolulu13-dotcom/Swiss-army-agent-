@@ -1,14 +1,269 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>XOS Builder</title>
-<link rel="manifest" href="/manifest.json">
+  <meta charset="UTF-8" />
+  <title>SimAI Telecom – Your Own Internet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #050816;
+      color: #f9fafb;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    header, footer {
+      padding: 1rem 1.25rem;
+      background: #020617;
+      border-bottom: 1px solid #111827;
+    }
+    footer {
+      border-top: 1px solid #111827;
+      border-bottom: none;
+      margin-top: auto;
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+    main {
+      padding: 1.25rem;
+      max-width: 720px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 1.6rem;
+      margin: 0 0 0.25rem;
+    }
+    h2 {
+      font-size: 1.1rem;
+      margin-top: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    p {
+      margin: 0.25rem 0;
+      color: #d1d5db;
+    }
+    .tiers {
+      display: grid;
+      gap: 0.75rem;
+      margin-top: 0.75rem;
+    }
+    .card {
+      border-radius: 0.75rem;
+      border: 1px solid #1f2937;
+      padding: 0.9rem;
+      background: radial-gradient(circle at top left, #111827, #020617);
+    }
+    .card h3 {
+      margin: 0 0 0.25rem;
+      font-size: 1rem;
+    }
+    .price {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-top: 0.25rem;
+    }
+    .features {
+      margin: 0.5rem 0;
+      padding-left: 1.1rem;
+      font-size: 0.85rem;
+      color: #9ca3af;
+    }
+    .features li {
+      margin: 0.15rem 0;
+    }
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 0.45rem 0.9rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      background: #22c55e;
+      color: #022c22;
+    }
+    button.secondary {
+      background: transparent;
+      color: #e5e7eb;
+      border: 1px solid #374151;
+      margin-left: 0.5rem;
+    }
+    .agent-box {
+      margin-top: 1.5rem;
+      border-radius: 0.75rem;
+      border: 1px solid #1f2937;
+      padding: 0.9rem;
+      background: #020617;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .agent-messages {
+      max-height: 260px;
+      overflow-y: auto;
+      font-size: 0.85rem;
+    }
+    .msg {
+      margin-bottom: 0.4rem;
+    }
+    .msg.agent {
+      color: #a5b4fc;
+    }
+    .msg.user {
+      color: #f97316;
+    }
+    .agent-input {
+      display: flex;
+      gap: 0.4rem;
+      margin-top: 0.25rem;
+    }
+    .agent-input input {
+      flex: 1;
+      border-radius: 999px;
+      border: 1px solid #374151;
+      padding: 0.4rem 0.7rem;
+      background: #020617;
+      color: #e5e7eb;
+      font-size: 0.85rem;
+    }
+  </style>
 </head>
-<body class="bg-xos-bg text-white">
-<div id="root"></div>
-<script type="module" src="/src/main.jsx"></script>
+<body>
+  <header>
+    <h1>SimAI Telecom</h1>
+    <p>Your own internet, sold in signals.</p>
+  </header>
+
+  <main>
+    <section>
+      <h2>Choose your signal tier</h2>
+      <p>These are live offers. Ask the agent which one fits you.</p>
+      <div id="tiers" class="tiers"></div>
+    </section>
+
+    <section class="agent-box">
+      <strong>SimAI Agent</strong>
+      <div id="agent-messages" class="agent-messages"></div>
+      <div class="agent-input">
+        <input id="agent-input" type="text" placeholder="Ask about tiers, usage, or which plan to pick…" />
+        <button id="agent-send">Send</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    SimAI Telecom · Operated by Xavier · Prototype portal
+  </footer>
+
+  <script>
+    const configUrl = '/simai-config.json';
+    const tiersContainer = document.getElementById('tiers');
+    const messagesEl = document.getElementById('agent-messages');
+    const inputEl = document.getElementById('agent-input');
+    const sendBtn = document.getElementById('agent-send');
+
+    let config = null;
+
+    function addMessage(text, role) {
+      const div = document.createElement('div');
+      div.className = 'msg ' + role;
+      div.textContent = text;
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    async function loadConfig() {
+      try {
+        const res = await fetch(configUrl);
+        config = await res.json();
+        renderTiers();
+        addMessage('I am the SimAI Telecom agent. Tell me how you want to use your internet and I will match you to a tier.', 'agent');
+      } catch (e) {
+        addMessage('Could not load offers. Check simai-config.json.', 'agent');
+      }
+    }
+
+    function renderTiers() {
+      if (!config) return;
+      tiersContainer.innerHTML = '';
+      config.tiers.forEach(tier => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <h3>${tier.name}</h3>
+          <p>${tier.description}</p>
+          <div class="price">$${tier.price} / month</div>
+          <ul class="features">
+            ${tier.features.map(f => `<li>${f}</li>`).join('')}
+          </ul>
+          <button data-tier="${tier.id}" class="buy-btn">Get this signal</button>
+          <button data-tier="${tier.id}" class="secondary ask-btn">Ask agent about this</button>
+        `;
+        tiersContainer.appendChild(card);
+      });
+
+      tiersContainer.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        const tierId = btn.getAttribute('data-tier');
+        if (btn.classList.contains('buy-btn')) {
+          handleBuy(tierId);
+        } else if (btn.classList.contains('ask-btn')) {
+          const tier = config.tiers.find(t => t.id === tierId);
+          if (tier) {
+            addMessage('Tell me if ' + tier.name + ' fits: ' + tier.description, 'agent');
+          }
+        }
+      }, { once: true });
+    }
+
+    function handleBuy(tierId) {
+      if (!config || !config.checkout || !config.checkout[tierId]) {
+        addMessage('Checkout link not configured for this tier yet.', 'agent');
+        return;
+      }
+      const url = config.checkout[tierId];
+      addMessage('Opening checkout for your ' + tierId + ' signal…', 'agent');
+      window.location.href = url;
+    }
+
+    async function sendToAgent(message) {
+      addMessage(message, 'user');
+      inputEl.value = '';
+      try {
+        const res = await fetch('/api/agent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message,
+            config
+          })
+        });
+        const data = await res.json();
+        addMessage(data.reply || 'No reply from agent.', 'agent');
+      } catch (e) {
+        addMessage('Agent is offline. Check backend.', 'agent');
+      }
+    }
+
+    sendBtn.addEventListener('click', () => {
+      const value = inputEl.value.trim();
+      if (!value) return;
+      sendToAgent(value);
+    });
+
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const value = inputEl.value.trim();
+        if (!value) return;
+        sendToAgent(value);
+      }
+    });
+
+    loadConfig();
+  </script>
 </body>
-</html>
+  </html>
+
