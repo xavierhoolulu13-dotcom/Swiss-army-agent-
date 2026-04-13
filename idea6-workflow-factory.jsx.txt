@@ -1,0 +1,323 @@
+import { useState } from "react";
+
+const AGENTS = ["beast-mode", "api-architect", "apify-expert", "gem-researcher", "finalize-prompt"];
+
+const EXAMPLES = [
+  "I want leads from LinkedIn filtered by role and company size",
+  "Send a Telegram message when MRR drops 10% in a day",
+  "Auto-post blog articles to 25 social platforms",
+  "When a client signs up via WHMCS, send a HeyGen welcome video",
+  "Scrape Upwork daily and add leads to NocoDB",
+];
+
+export default function WorkflowFactory() {
+  const [wish, setWish] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [phase, setPhase] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const phases = [
+    { id: "beast", label: "BEAST MODE", sub: "Autonomous research + architecture" },
+    { id: "architect", label: "API ARCHITECT", sub: "Service layer generation" },
+    { id: "yourwish", label: "YOURWISH", sub: "Naming playbook" },
+    { id: "amanda", label: "AMANDA", sub: "Deploying to xos-v3" },
+  ];
+
+  const generate = async () => {
+    if (!wish.trim()) return;
+    setLoading(true);
+    setResult(null);
+
+    const phaseList = ["beast", "architect", "yourwish", "amanda"];
+    for (const p of phaseList) {
+      setPhase(p);
+      await new Promise(r => setTimeout(r, 600));
+    }
+
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [{
+            role: "user",
+            content: `You are an n8n workflow architect inside xos-v3 (Beast Mode agent). Given a user wish, generate:
+1. A short playbook name (4-6 words, snake_case, e.g. "linkedin_lead_filter_v1")
+2. The agent assigned (one of: beast-mode, api-architect, apify-expert, gem-researcher)
+3. A trigger type (webhook / schedule / event / manual)
+4. An array of 5-8 n8n node names representing the workflow steps
+5. A one-line Amanda deployment command
+
+Respond ONLY as valid JSON with keys: playbook_name, agent, trigger, nodes (array of strings), deploy_cmd, estimated_nodes (number 8-44).
+
+User wish: "${wish}"`
+          }]
+        })
+      });
+      const data = await res.json();
+      const raw = data.content?.find(b => b.type === "text")?.text || "{}";
+      const clean = raw.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(clean);
+      setResult(parsed);
+    } catch (e) {
+      setResult({ error: "Failed to generate. Check console." });
+    }
+    setPhase("");
+    setLoading(false);
+  };
+
+  const css = `
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@700;900&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    .wf { font-family: 'Share Tech Mono', monospace; background: #020b02; min-height: 100vh; color: #00ff41; padding: 32px 24px; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    @keyframes scan { 0%{top:0} 100%{top:100%} }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    .cursor::after { content: '█'; animation: blink 1s infinite; margin-left: 2px; }
+    .phase-active { color: #00ff41; }
+    .phase-done { color: #005c17; }
+    .phase-wait { color: #013a08; }
+    textarea { resize: none; outline: none; caret-color: #00ff41; }
+    textarea::placeholder { color: #014a09; }
+    .wish-btn { cursor: pointer; border: none; transition: all 0.15s; }
+    .wish-btn:hover:not(:disabled) { background: #00ff41 !important; color: #020b02 !important; }
+    .wish-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .example-tag { cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+    .example-tag:hover { color: #00ff41 !important; border-color: #00ff41 !important; }
+    .copy-btn { cursor: pointer; border: none; transition: all 0.15s; }
+    .copy-btn:hover { background: #00ff41 !important; color: #020b02 !important; }
+    .node-item { animation: fadeIn 0.3s ease both; }
+  `;
+
+  const currentPhaseIdx = phases.findIndex(p => p.id === phase);
+
+  return (
+    <>
+      <style>{css}</style>
+      <div className="wf">
+        <div style={{ maxWidth: "780px", margin: "0 auto" }}>
+
+          {/* Header */}
+          <div style={{ marginBottom: "40px", borderBottom: "1px solid #012b06", paddingBottom: "20px" }}>
+            <div style={{ fontSize: "11px", letterSpacing: "0.2em", color: "#005c17", marginBottom: "8px" }}>
+              XOS-V3 / AUTOMATION / WORKFLOW-FACTORY
+            </div>
+            <div style={{
+              fontFamily: "'Barlow Condensed', sans-serif",
+              fontSize: "clamp(36px, 7vw, 64px)",
+              fontWeight: 900,
+              letterSpacing: "-0.02em",
+              color: "#00ff41",
+              lineHeight: 1,
+              marginBottom: "6px",
+            }}>
+              BEAST MODE<br />
+              <span style={{ color: "#005c17" }}>WORKFLOW</span> FACTORY
+            </div>
+            <div style={{ fontSize: "12px", color: "#005c17" }}>
+              type one wish → n8n JSON → yourwish playbook → amanda deploys
+            </div>
+          </div>
+
+          {/* Examples */}
+          <div style={{ marginBottom: "20px", display: "flex", flexWrap: "wrap", gap: "8px" }}>
+            <span style={{ fontSize: "10px", color: "#014a09", letterSpacing: "0.12em", alignSelf: "center" }}>TRY:</span>
+            {EXAMPLES.map((e, i) => (
+              <div
+                key={i}
+                className="example-tag"
+                onClick={() => setWish(e)}
+                style={{
+                  fontSize: "10px",
+                  border: "1px solid #013a08",
+                  color: "#005c17",
+                  padding: "4px 10px",
+                  borderRadius: "2px",
+                  letterSpacing: "0.04em",
+                }}>
+                {e.slice(0, 38)}{e.length > 38 ? "…" : ""}
+              </div>
+            ))}
+          </div>
+
+          {/* Input */}
+          <div style={{
+            border: "1px solid #00ff41",
+            borderRadius: "4px",
+            padding: "16px",
+            marginBottom: "20px",
+            background: "#020e02",
+            position: "relative",
+          }}>
+            <div style={{ fontSize: "10px", color: "#005c17", letterSpacing: "0.15em", marginBottom: "10px" }}>
+              $ ENTER WISH ──────────────────────────────────────
+            </div>
+            <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+              <span style={{ color: "#00ff41", fontSize: "16px", paddingTop: "2px" }}>❯</span>
+              <textarea
+                value={wish}
+                onChange={e => setWish(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), generate())}
+                placeholder="I want..."
+                rows={2}
+                style={{
+                  flex: 1,
+                  background: "transparent",
+                  border: "none",
+                  color: "#00ff41",
+                  fontFamily: "'Share Tech Mono', monospace",
+                  fontSize: "15px",
+                  lineHeight: 1.5,
+                }}
+              />
+            </div>
+          </div>
+
+          <button
+            className="wish-btn"
+            onClick={generate}
+            disabled={loading || !wish.trim()}
+            style={{
+              width: "100%",
+              padding: "14px",
+              background: "transparent",
+              border: "1px solid #00ff41",
+              color: "#00ff41",
+              fontFamily: "'Share Tech Mono', monospace",
+              fontSize: "14px",
+              letterSpacing: "0.18em",
+              borderRadius: "4px",
+              marginBottom: "36px",
+            }}>
+            {loading ? "▶ GENERATING..." : "▶ MAKE IT HAPPEN"}
+          </button>
+
+          {/* Phase tracker */}
+          {loading && (
+            <div style={{ marginBottom: "32px", display: "grid", gap: "10px" }}>
+              {phases.map((p, i) => {
+                const state = i < currentPhaseIdx ? "done" : i === currentPhaseIdx ? "active" : "wait";
+                return (
+                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                    <span style={{
+                      color: state === "done" ? "#00ff41" : state === "active" ? "#00ff41" : "#013a08",
+                      fontSize: "12px",
+                    }}>
+                      {state === "done" ? "✓" : state === "active" ? "▶" : "○"}
+                    </span>
+                    <div>
+                      <div style={{
+                        fontSize: "12px",
+                        color: state === "wait" ? "#013a08" : "#00ff41",
+                        letterSpacing: "0.12em",
+                      }}>{p.label}</div>
+                      <div style={{ fontSize: "10px", color: "#005c17" }}>{p.sub}</div>
+                    </div>
+                    {state === "active" && (
+                      <div style={{ marginLeft: "auto", display: "flex", gap: "3px" }}>
+                        {[0.1, 0.2, 0.3].map(d => (
+                          <div key={d} style={{
+                            width: "4px", height: "4px", borderRadius: "50%", background: "#00ff41",
+                            animation: `blink 0.8s ${d}s infinite`,
+                          }} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Result */}
+          {result && !result.error && (
+            <div style={{ animation: "fadeIn 0.4s ease" }}>
+              {/* Playbook name */}
+              <div style={{
+                background: "#00ff41",
+                color: "#020b02",
+                padding: "12px 16px",
+                borderRadius: "4px 4px 0 0",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}>
+                <div>
+                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: "20px", fontWeight: 900, letterSpacing: "0.06em" }}>
+                    {result.playbook_name?.toUpperCase()}
+                  </div>
+                  <div style={{ fontSize: "10px", opacity: 0.6, letterSpacing: "0.12em" }}>
+                    AGENT: {result.agent?.toUpperCase()} · TRIGGER: {result.trigger?.toUpperCase()} · {result.estimated_nodes} NODES
+                  </div>
+                </div>
+                <button
+                  className="copy-btn"
+                  onClick={() => { navigator.clipboard.writeText(JSON.stringify(result, null, 2)); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                  style={{
+                    padding: "6px 14px",
+                    background: "transparent",
+                    border: "1px solid #020b02",
+                    color: "#020b02",
+                    fontFamily: "'Share Tech Mono', monospace",
+                    fontSize: "10px",
+                    letterSpacing: "0.12em",
+                    borderRadius: "2px",
+                  }}>
+                  {copied ? "COPIED" : "COPY JSON"}
+                </button>
+              </div>
+
+              {/* Workflow nodes */}
+              <div style={{
+                border: "1px solid #00ff41",
+                borderTop: "none",
+                padding: "20px",
+                borderRadius: "0 0 4px 4px",
+                background: "#020e02",
+              }}>
+                <div style={{ fontSize: "10px", color: "#005c17", letterSpacing: "0.14em", marginBottom: "14px" }}>
+                  WORKFLOW NODES ──────────────────────
+                </div>
+                <div style={{ display: "grid", gap: "8px", marginBottom: "20px" }}>
+                  {result.nodes?.map((node, i) => (
+                    <div
+                      key={i}
+                      className="node-item"
+                      style={{ animationDelay: `${i * 0.07}s`, display: "flex", alignItems: "center", gap: "12px" }}>
+                      <span style={{ color: "#005c17", fontSize: "11px", minWidth: "22px" }}>
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <div style={{ flex: 1, height: "1px", background: "#013a08" }} />
+                      <span style={{ color: "#00ff41", fontSize: "12px" }}>{node}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{
+                  borderTop: "1px solid #013a08",
+                  paddingTop: "16px",
+                  fontSize: "12px",
+                  color: "#005c17",
+                }}>
+                  <div style={{ marginBottom: "6px", letterSpacing: "0.1em" }}>$ DEPLOY CMD:</div>
+                  <div style={{ color: "#00ff41", fontSize: "13px" }}>
+                    <span style={{ color: "#005c17" }}>amanda</span> {result.deploy_cmd}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {result?.error && (
+            <div style={{ color: "#ff4141", fontSize: "12px", padding: "12px", border: "1px solid #ff4141", borderRadius: "4px" }}>
+              {result.error}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}

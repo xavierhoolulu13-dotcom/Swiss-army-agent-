@@ -1,0 +1,346 @@
+import { useState, useEffect, useRef } from "react";
+
+const SEED_TICKERS = [
+  { id: "AMND", name: "Amanda Orchestrator v2", type: "reel", price: 148.40, prev: 122.10, volume: 84200, mrr_impact: "+$3,200" },
+  { id: "BST8", name: "Beast Mode Launch Post", type: "thread", price: 89.20, prev: 91.00, volume: 32100, mrr_impact: "+$800" },
+  { id: "VD3X", name: "VEO3 Viral Demo", type: "video", price: 312.80, prev: 244.50, volume: 195000, mrr_impact: "+$12,400" },
+  { id: "WFJ9", name: "Workflow Factory Drop", type: "post", price: 67.50, prev: 58.20, volume: 21000, mrr_impact: "+$640" },
+  { id: "XOSV", name: "xos-v3 Architecture Doc", type: "thread", price: 201.30, prev: 189.70, volume: 67400, mrr_impact: "+$5,800" },
+  { id: "HMRK", name: "WHMCS Ambush Demo", type: "reel", price: 44.90, prev: 47.20, volume: 8900, mrr_impact: "-$120" },
+  { id: "N8NW", name: "n8n Workflow Pack Drop", type: "video", price: 178.60, prev: 162.30, volume: 88700, mrr_impact: "+$7,100" },
+  { id: "BGNT", name: "Brand Constitution Reveal", type: "post", price: 33.10, prev: 28.80, volume: 14200, mrr_impact: "+$390" },
+];
+
+const EVENTS = [
+  { ticker: "VD3X", type: "LeadConverted", msg: "VEO3 demo → 14 new signups", impact: +28.4, color: "#00ff88" },
+  { ticker: "AMND", type: "MRRChanged", msg: "Amanda post shared by @levelsio", impact: +18.2, color: "#00ff88" },
+  { ticker: "HMRK", type: "ClientChurned", msg: "WHMCS post underperforming", impact: -8.7, color: "#ff4141" },
+  { ticker: "N8NW", type: "LeadCreated", msg: "n8n pack → 32 email captures", impact: +12.1, color: "#00ff88" },
+  { ticker: "BST8", type: "MRRChanged", msg: "Thread engagement dropped", impact: -6.3, color: "#ff4141" },
+  { ticker: "XOSV", type: "LeadConverted", msg: "Architecture doc → enterprise inquiry", impact: +22.8, color: "#00ff88" },
+];
+
+const TYPE_COLORS = { reel: "#bf5af2", thread: "#00c8ff", video: "#ff9f0a", post: "#30d158" };
+
+const Sparkline = ({ data, color }) => {
+  const w = 80, h = 28;
+  const min = Math.min(...data), max = Math.max(...data), range = max - min || 1;
+  const pts = data.map((v, i) => `${(i / (data.length - 1)) * w},${h - ((v - min) / range) * h}`).join(" ");
+  return (
+    <svg width={w} height={h} style={{ overflow: "visible" }}>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
+  );
+};
+
+export default function ContentMarket() {
+  const [tickers, setTickers] = useState(SEED_TICKERS.map(t => ({
+    ...t,
+    history: Array.from({ length: 20 }, (_, i) => t.price * (0.88 + Math.random() * 0.24)),
+    change: ((t.price - t.prev) / t.prev * 100),
+  })));
+  const [events, setEvents] = useState([]);
+  const [portfolio, setPortfolio] = useState({ AMND: 10, VD3X: 5, XOSV: 8 });
+  const [selectedTicker, setSelectedTicker] = useState(null);
+  const [marketCap, setMarketCap] = useState(0);
+  const [rsisTick, setRsisTick] = useState(0);
+  const eventRef = useRef([]);
+  const tickerRef = useRef(tickers);
+
+  useEffect(() => { tickerRef.current = tickers; }, [tickers]);
+
+  // Live market simulation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTickers(prev => prev.map(t => {
+        const drift = (Math.random() - 0.49) * 2.8;
+        const newPrice = Math.max(8, t.price + drift);
+        return {
+          ...t,
+          prev: t.price,
+          price: +newPrice.toFixed(2),
+          change: ((newPrice - t.prev) / t.prev * 100),
+          volume: t.volume + Math.floor(Math.random() * 500),
+          history: [...t.history.slice(-19), newPrice],
+        };
+      }));
+      setRsisTick(r => r + 1);
+    }, 1400);
+
+    // Fire random RSIS events
+    const eventInterval = setInterval(() => {
+      const e = EVENTS[Math.floor(Math.random() * EVENTS.length)];
+      const newEvent = { ...e, id: Date.now(), time: new Date().toLocaleTimeString("en", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" }) };
+      setEvents(prev => [newEvent, ...prev].slice(0, 12));
+
+      // Apply impact
+      setTickers(prev => prev.map(t =>
+        t.id === e.ticker ? { ...t, price: +(t.price + e.impact).toFixed(2), change: e.impact } : t
+      ));
+    }, 4500);
+
+    return () => { clearInterval(interval); clearInterval(eventInterval); };
+  }, []);
+
+  useEffect(() => {
+    const total = tickers.reduce((s, t) => s + t.price * (portfolio[t.id] || 0), 0);
+    setMarketCap(total);
+  }, [tickers, portfolio]);
+
+  const totalMarketCap = tickers.reduce((s, t) => s + t.price * t.volume / 1000, 0);
+
+  const css = `
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Bebas+Neue&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    .cm { font-family: 'IBM Plex Mono', monospace; background: #040608; min-height: 100vh; color: #c8d8c8; }
+    @keyframes flash-up { 0%{background:rgba(0,255,136,0.15)} 100%{background:transparent} }
+    @keyframes flash-down { 0%{background:rgba(255,65,65,0.15)} 100%{background:transparent} }
+    @keyframes slide-in { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:translateX(0)} }
+    .ticker-row { cursor: pointer; transition: background 0.15s; }
+    .ticker-row:hover { background: rgba(200,216,200,0.04) !important; }
+    .ticker-up { animation: flash-up 0.8s ease; }
+    .ticker-down { animation: flash-down 0.8s ease; }
+  `;
+
+  const sel = selectedTicker ? tickers.find(t => t.id === selectedTicker) : null;
+
+  return (
+    <>
+      <style>{css}</style>
+      <div className="cm">
+
+        {/* Top bar */}
+        <div style={{
+          background: "#060a08",
+          borderBottom: "1px solid rgba(200,216,200,0.08)",
+          padding: "10px 20px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "8px",
+          fontSize: "10px",
+          letterSpacing: "0.12em",
+        }}>
+          <div style={{ display: "flex", gap: "24px", alignItems: "center" }}>
+            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "18px", color: "#00ff88", letterSpacing: "0.08em" }}>
+              RSIS808 EXCHANGE
+            </span>
+            <span style={{ color: "rgba(200,216,200,0.35)" }}>CONTENT MARKET</span>
+          </div>
+          <div style={{ display: "flex", gap: "24px" }}>
+            {[
+              ["MARKET CAP", `$${(totalMarketCap / 1000).toFixed(1)}K`],
+              ["ACTIVE TICKERS", tickers.length],
+              ["TICK", `#${rsisTick}`],
+              ["PORTFOLIO", `$${marketCap.toFixed(0)}`],
+            ].map(([k, v]) => (
+              <div key={k} style={{ display: "flex", gap: "6px" }}>
+                <span style={{ color: "rgba(200,216,200,0.3)" }}>{k}:</span>
+                <span style={{ color: "#00ff88" }}>{v}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Ticker tape */}
+        <div style={{
+          background: "#030504",
+          borderBottom: "1px solid rgba(0,255,136,0.1)",
+          padding: "6px 0",
+          overflow: "hidden",
+          whiteSpace: "nowrap",
+        }}>
+          <div style={{
+            display: "inline-flex",
+            gap: "32px",
+            animation: "none",
+            fontSize: "10px",
+            letterSpacing: "0.08em",
+            padding: "0 20px",
+          }}>
+            {[...tickers, ...tickers].map((t, i) => (
+              <span key={i}>
+                <span style={{ color: "rgba(200,216,200,0.5)" }}>{t.id}</span>
+                {" "}
+                <span style={{ color: t.change >= 0 ? "#00ff88" : "#ff4141" }}>
+                  ${t.price.toFixed(2)} {t.change >= 0 ? "▲" : "▼"}{Math.abs(t.change).toFixed(2)}%
+                </span>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "0", maxHeight: "calc(100vh - 88px)" }}>
+
+          {/* Main table */}
+          <div style={{ overflow: "auto", borderRight: "1px solid rgba(200,216,200,0.07)" }}>
+            {/* Column headers */}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "60px 1fr 80px 90px 80px 80px 90px 80px",
+              padding: "8px 16px",
+              fontSize: "9px",
+              letterSpacing: "0.16em",
+              color: "rgba(200,216,200,0.3)",
+              borderBottom: "1px solid rgba(200,216,200,0.07)",
+              background: "#040608",
+              position: "sticky",
+              top: 0,
+              zIndex: 1,
+            }}>
+              {["TICKER", "CONTENT", "TYPE", "PRICE", "CHG%", "VOLUME", "MRR ΔIMPACT", "CHART"].map(h => (
+                <div key={h}>{h}</div>
+              ))}
+            </div>
+
+            {tickers.map((t) => {
+              const up = t.change >= 0;
+              return (
+                <div
+                  key={t.id}
+                  className={`ticker-row ${up ? "ticker-up" : "ticker-down"}`}
+                  onClick={() => setSelectedTicker(t.id === selectedTicker ? null : t.id)}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "60px 1fr 80px 90px 80px 80px 90px 80px",
+                    padding: "10px 16px",
+                    borderBottom: "1px solid rgba(200,216,200,0.04)",
+                    fontSize: "11px",
+                    alignItems: "center",
+                    background: selectedTicker === t.id ? "rgba(0,255,136,0.04)" : "transparent",
+                  }}>
+                  <div style={{ color: "#00ff88", fontWeight: 600 }}>{t.id}</div>
+                  <div style={{ color: "rgba(200,216,200,0.7)", fontSize: "10px" }}>{t.name}</div>
+                  <div>
+                    <span style={{
+                      background: `${TYPE_COLORS[t.type]}22`,
+                      color: TYPE_COLORS[t.type],
+                      padding: "2px 6px",
+                      borderRadius: "2px",
+                      fontSize: "9px",
+                      letterSpacing: "0.08em",
+                    }}>{t.type.toUpperCase()}</span>
+                  </div>
+                  <div style={{ color: "#fff", fontWeight: 500 }}>${t.price.toFixed(2)}</div>
+                  <div style={{ color: up ? "#00ff88" : "#ff4141" }}>
+                    {up ? "+" : ""}{t.change.toFixed(2)}%
+                  </div>
+                  <div style={{ color: "rgba(200,216,200,0.45)", fontSize: "10px" }}>
+                    {(t.volume / 1000).toFixed(1)}K
+                  </div>
+                  <div style={{ color: t.mrr_impact.startsWith("+") ? "#00ff88" : "#ff4141", fontSize: "10px" }}>
+                    {t.mrr_impact}
+                  </div>
+                  <div>
+                    <Sparkline data={t.history} color={up ? "#00ff88" : "#ff4141"} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Right panel */}
+          <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+            {/* Selected ticker detail */}
+            {sel ? (
+              <div style={{
+                padding: "16px",
+                borderBottom: "1px solid rgba(200,216,200,0.07)",
+                flex: "0 0 auto",
+              }}>
+                <div style={{ fontSize: "9px", letterSpacing: "0.16em", color: "rgba(200,216,200,0.3)", marginBottom: "8px" }}>
+                  SELECTED · {sel.id}
+                </div>
+                <div style={{ fontSize: "11px", color: "rgba(200,216,200,0.7)", marginBottom: "12px", lineHeight: 1.4 }}>
+                  {sel.name}
+                </div>
+                <div style={{
+                  fontFamily: "'Bebas Neue', sans-serif",
+                  fontSize: "36px",
+                  color: sel.change >= 0 ? "#00ff88" : "#ff4141",
+                  letterSpacing: "0.04em",
+                  lineHeight: 1,
+                  marginBottom: "4px",
+                }}>
+                  ${sel.price.toFixed(2)}
+                </div>
+                <div style={{ fontSize: "11px", color: sel.change >= 0 ? "#00ff88" : "#ff4141", marginBottom: "16px" }}>
+                  {sel.change >= 0 ? "▲" : "▼"} {Math.abs(sel.change).toFixed(2)}% this tick
+                </div>
+                <Sparkline data={sel.history} color={sel.change >= 0 ? "#00ff88" : "#ff4141"} />
+                <div style={{
+                  marginTop: "14px",
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "8px",
+                  fontSize: "10px",
+                }}>
+                  {[["VOLUME", `${(sel.volume / 1000).toFixed(1)}K`], ["MRR IMPACT", sel.mrr_impact], ["TYPE", sel.type.toUpperCase()], ["IN PORTFOLIO", (portfolio[sel.id] || 0) + " units"]].map(([k, v]) => (
+                    <div key={k} style={{
+                      padding: "8px",
+                      background: "rgba(200,216,200,0.03)",
+                      border: "1px solid rgba(200,216,200,0.07)",
+                      borderRadius: "3px",
+                    }}>
+                      <div style={{ color: "rgba(200,216,200,0.3)", letterSpacing: "0.1em", fontSize: "9px", marginBottom: "4px" }}>{k}</div>
+                      <div style={{ color: "#c8d8c8" }}>{v}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div style={{
+                padding: "16px",
+                borderBottom: "1px solid rgba(200,216,200,0.07)",
+                color: "rgba(200,216,200,0.2)",
+                fontSize: "11px",
+                flex: "0 0 auto",
+              }}>
+                Click a ticker to inspect
+              </div>
+            )}
+
+            {/* RSIS808 Event feed */}
+            <div style={{ flex: 1, overflow: "auto", padding: "12px" }}>
+              <div style={{ fontSize: "9px", letterSpacing: "0.16em", color: "rgba(200,216,200,0.3)", marginBottom: "10px" }}>
+                RSIS808 EVENT STREAM
+              </div>
+              <div style={{ display: "grid", gap: "6px" }}>
+                {events.map(e => (
+                  <div
+                    key={e.id}
+                    style={{
+                      padding: "9px 10px",
+                      background: `${e.color}08`,
+                      border: `1px solid ${e.color}22`,
+                      borderRadius: "3px",
+                      animation: "slide-in 0.3s ease",
+                      fontSize: "10px",
+                      lineHeight: 1.5,
+                    }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "3px" }}>
+                      <span style={{ color: e.color, letterSpacing: "0.08em" }}>{e.type}</span>
+                      <span style={{ color: "rgba(200,216,200,0.25)", fontSize: "9px" }}>{e.time}</span>
+                    </div>
+                    <div style={{ color: "rgba(200,216,200,0.5)" }}>
+                      <span style={{ color: "#00ff88", marginRight: "6px" }}>{e.ticker}</span>
+                      {e.msg}
+                    </div>
+                    <div style={{ color: e.impact >= 0 ? "#00ff88" : "#ff4141", marginTop: "3px", fontSize: "9px" }}>
+                      PRICE IMPACT: {e.impact >= 0 ? "+" : ""}{e.impact.toFixed(1)}
+                    </div>
+                  </div>
+                ))}
+                {events.length === 0 && (
+                  <div style={{ color: "rgba(200,216,200,0.2)", fontSize: "10px" }}>Awaiting events…</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}

@@ -1,0 +1,450 @@
+import { useState } from "react";
+
+const DEFAULT_RULES = [
+  { id: "voice", category: "VOICE", rule: "Always speak as a builder, not a vendor. We make things, we don't sell things.", locked: true },
+  { id: "tone", category: "TONE", rule: "Direct, confident, never corporate. Short sentences. No fluff.", locked: true },
+  { id: "cta", category: "CTAs", rule: "CTAs are invitations, not commands. 'Let's build' over 'Buy now'.", locked: false },
+  { id: "forbidden", category: "FORBIDDEN WORDS", rule: "Never: synergy, leverage, ecosystem, unlock, empower, seamless, robust.", locked: true },
+  { id: "persona", category: "PERSONA", rule: "SimAI is an AI infrastructure crew, not a SaaS product. Amanda is a team member, not a chatbot.", locked: false },
+  { id: "format", category: "FORMAT", rule: "All caps for product names. Dots as separators. FULL·SIM not Full Sim.", locked: true },
+];
+
+const HASH_SAMPLE = "sha256:a3f9c2b1d4e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6";
+
+export default function BrandConstitution() {
+  const [rules, setRules] = useState(DEFAULT_RULES);
+  const [editingId, setEditingId] = useState(null);
+  const [editText, setEditText] = useState("");
+  const [testContent, setTestContent] = useState("");
+  const [validating, setValidating] = useState(false);
+  const [verdict, setVerdict] = useState(null);
+  const [newRule, setNewRule] = useState("");
+  const [newCat, setNewCat] = useState("VOICE");
+
+  const lockedCount = rules.filter(r => r.locked).length;
+
+  const lockRule = (id) => setRules(r => r.map(x => x.id === id ? { ...x, locked: true } : x));
+  const startEdit = (r) => { if (r.locked) return; setEditingId(r.id); setEditText(r.rule); };
+  const saveEdit = (id) => {
+    setRules(r => r.map(x => x.id === id ? { ...x, rule: editText } : x));
+    setEditingId(null);
+  };
+  const addRule = () => {
+    if (!newRule.trim()) return;
+    setRules(r => [...r, { id: Date.now().toString(), category: newCat, rule: newRule, locked: false }]);
+    setNewRule("");
+  };
+
+  const validate = async () => {
+    if (!testContent.trim()) return;
+    setValidating(true);
+    setVerdict(null);
+    const frozenRules = rules.filter(r => r.locked).map(r => `[${r.category}] ${r.rule}`).join("\n");
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [{
+            role: "user",
+            content: `You are a brand compliance validator for SimAI. These are the FROZEN (immutable) brand rules:\n\n${frozenRules}\n\nValidate this content against ALL rules:\n\n"${testContent}"\n\nRespond ONLY as JSON with keys:\n- pass: boolean\n- score: number 0-100\n- violations: array of {rule_category: string, issue: string, fix: string}\n- compliant_elements: array of strings\n- revised_version: string (rewritten to comply with all rules)`
+          }]
+        })
+      });
+      const data = await res.json();
+      const raw = data.content?.find(b => b.type === "text")?.text || "{}";
+      setVerdict(JSON.parse(raw.replace(/```json|```/g, "").trim()));
+    } catch (e) {
+      setVerdict({ error: true });
+    }
+    setValidating(false);
+  };
+
+  const css = `
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Courier+Prime:wght@400;700&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    .bc { font-family: 'Courier Prime', monospace; background: #0e0c08; min-height: 100vh; color: #d4c9a8; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes stampIn { from{opacity:0;transform:scale(1.3) rotate(-4deg)} to{opacity:1;transform:scale(1) rotate(-4deg)} }
+    .lock-btn, .add-btn, .edit-btn, .validate-btn { cursor: pointer; border: none; transition: all 0.18s; }
+    .lock-btn:hover { background: rgba(212,201,168,0.15) !important; }
+    .add-btn:hover { background: #d4c9a8 !important; color: #0e0c08 !important; }
+    .validate-btn:hover:not(:disabled) { background: #c4783c !important; color: #0e0c08 !important; }
+    .validate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    textarea, input { outline: none; }
+    .rule-locked { opacity: 0.95; }
+    .rule-editable:hover { background: rgba(212,201,168,0.04) !important; }
+  `;
+
+  const cats = ["VOICE", "TONE", "CTAs", "PERSONA", "FORMAT", "FORBIDDEN WORDS"];
+
+  return (
+    <>
+      <style>{css}</style>
+      <div className="bc">
+
+        {/* Parchment header */}
+        <div style={{
+          background: "linear-gradient(180deg, #1a1508 0%, #0e0c08 100%)",
+          borderBottom: "3px double rgba(212,201,168,0.2)",
+          padding: "48px 32px 36px",
+          textAlign: "center",
+          position: "relative",
+          overflow: "hidden",
+        }}>
+          {/* Texture */}
+          <div style={{
+            position: "absolute", inset: 0,
+            backgroundImage: "radial-gradient(ellipse at 20% 50%, rgba(196,120,60,0.04) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(212,201,168,0.03) 0%, transparent 60%)",
+            pointerEvents: "none",
+          }} />
+
+          <div style={{ position: "relative" }}>
+            <div style={{ fontSize: "10px", letterSpacing: "0.3em", color: "rgba(212,201,168,0.35)", marginBottom: "14px" }}>
+              SIMAI · BRAND OFFICE · ESTABLISHED 2024
+            </div>
+            <h1 style={{
+              fontFamily: "'Playfair Display', serif",
+              fontSize: "clamp(28px, 6vw, 54px)",
+              fontWeight: 900,
+              color: "#d4c9a8",
+              letterSpacing: "0.04em",
+              marginBottom: "8px",
+              lineHeight: 1.1,
+            }}>
+              The Brand Constitution
+            </h1>
+            <div style={{
+              fontFamily: "'Playfair Display', serif",
+              fontSize: "14px",
+              color: "rgba(212,201,168,0.45)",
+              fontStyle: "italic",
+              marginBottom: "20px",
+            }}>
+              Immutable rules that govern every word SimAI produces.
+            </div>
+
+            {/* Hash seal */}
+            <div style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              background: "rgba(212,201,168,0.06)",
+              border: "1px solid rgba(212,201,168,0.15)",
+              borderRadius: "2px",
+              padding: "6px 16px",
+              fontSize: "9px",
+              letterSpacing: "0.1em",
+              color: "rgba(212,201,168,0.4)",
+            }}>
+              🔒 CONSTITUTIONAL HASH: {HASH_SAMPLE.slice(0, 32)}…
+              <span style={{ color: "#c4783c" }}>{lockedCount} RULES FROZEN</span>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ maxWidth: "860px", margin: "0 auto", padding: "40px 32px" }}>
+
+          {/* Rules list */}
+          <div style={{ marginBottom: "48px" }}>
+            <div style={{
+              fontSize: "9px", letterSpacing: "0.25em", color: "rgba(212,201,168,0.35)",
+              marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "center",
+            }}>
+              <span>CONSTITUTIONAL ARTICLES</span>
+              <span style={{ color: "#c4783c" }}>{lockedCount}/{rules.length} FROZEN</span>
+            </div>
+
+            <div style={{ display: "grid", gap: "10px" }}>
+              {rules.map((r, i) => (
+                <div
+                  key={r.id}
+                  className={r.locked ? "rule-locked" : "rule-editable"}
+                  style={{
+                    display: "flex",
+                    gap: "14px",
+                    padding: "16px 18px",
+                    background: r.locked ? "rgba(196,120,60,0.06)" : "rgba(212,201,168,0.03)",
+                    border: `1px solid ${r.locked ? "rgba(196,120,60,0.3)" : "rgba(212,201,168,0.1)"}`,
+                    borderRadius: "3px",
+                    cursor: r.locked ? "default" : "pointer",
+                    transition: "all 0.2s",
+                  }}
+                  onClick={() => !r.locked && editingId !== r.id && startEdit(r)}>
+
+                  {/* Article number */}
+                  <div style={{
+                    fontFamily: "'Playfair Display', serif",
+                    fontSize: "22px",
+                    color: r.locked ? "rgba(196,120,60,0.4)" : "rgba(212,201,168,0.15)",
+                    minWidth: "28px",
+                    lineHeight: 1,
+                    paddingTop: "2px",
+                  }}>
+                    {String(i + 1).padStart(2, "0")}
+                  </div>
+
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: "9px", letterSpacing: "0.18em", color: r.locked ? "#c4783c" : "rgba(212,201,168,0.35)", marginBottom: "6px" }}>
+                      {r.category}
+                      {r.locked && <span style={{ marginLeft: "8px" }}>· IMMUTABLE</span>}
+                    </div>
+
+                    {editingId === r.id ? (
+                      <div onClick={e => e.stopPropagation()}>
+                        <textarea
+                          value={editText}
+                          onChange={e => setEditText(e.target.value)}
+                          rows={2}
+                          style={{
+                            width: "100%",
+                            background: "rgba(212,201,168,0.05)",
+                            border: "1px solid rgba(212,201,168,0.2)",
+                            borderRadius: "2px",
+                            padding: "8px 10px",
+                            color: "#d4c9a8",
+                            fontFamily: "'Courier Prime', monospace",
+                            fontSize: "13px",
+                            lineHeight: 1.5,
+                            marginBottom: "8px",
+                            resize: "none",
+                          }}
+                          autoFocus
+                        />
+                        <div style={{ display: "flex", gap: "8px" }}>
+                          <button className="lock-btn" onClick={() => saveEdit(r.id)} style={{
+                            padding: "5px 14px", background: "rgba(212,201,168,0.08)", border: "1px solid rgba(212,201,168,0.2)",
+                            color: "#d4c9a8", fontFamily: "'Courier Prime', monospace", fontSize: "11px", borderRadius: "2px",
+                          }}>SAVE</button>
+                          <button className="lock-btn" onClick={() => { saveEdit(r.id); lockRule(r.id); }} style={{
+                            padding: "5px 14px", background: "rgba(196,120,60,0.15)", border: "1px solid rgba(196,120,60,0.35)",
+                            color: "#c4783c", fontFamily: "'Courier Prime', monospace", fontSize: "11px", borderRadius: "2px",
+                          }}>SAVE & FREEZE 🔒</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: "13px", lineHeight: "1.6", color: r.locked ? "#d4c9a8" : "rgba(212,201,168,0.65)" }}>
+                        {r.rule}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Lock control */}
+                  {!r.locked && editingId !== r.id && (
+                    <button
+                      className="lock-btn"
+                      onClick={e => { e.stopPropagation(); lockRule(r.id); }}
+                      style={{
+                        padding: "4px 10px",
+                        background: "transparent",
+                        border: "1px solid rgba(212,201,168,0.12)",
+                        color: "rgba(212,201,168,0.3)",
+                        fontFamily: "'Courier Prime', monospace",
+                        fontSize: "10px",
+                        letterSpacing: "0.08em",
+                        borderRadius: "2px",
+                        alignSelf: "flex-start",
+                        flexShrink: 0,
+                      }}>
+                      FREEZE
+                    </button>
+                  )}
+                  {r.locked && (
+                    <div style={{ color: "#c4783c", fontSize: "16px", alignSelf: "flex-start" }}>🔒</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Add rule */}
+          <div style={{
+            borderTop: "1px dashed rgba(212,201,168,0.1)",
+            paddingTop: "28px",
+            marginBottom: "48px",
+          }}>
+            <div style={{ fontSize: "9px", letterSpacing: "0.2em", color: "rgba(212,201,168,0.3)", marginBottom: "14px" }}>
+              + ADD NEW ARTICLE (will be editable until frozen)
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: "10px", alignItems: "start" }}>
+              <select
+                value={newCat}
+                onChange={e => setNewCat(e.target.value)}
+                style={{
+                  background: "#0e0c08",
+                  border: "1px solid rgba(212,201,168,0.15)",
+                  borderRadius: "2px",
+                  padding: "9px 12px",
+                  color: "#d4c9a8",
+                  fontFamily: "'Courier Prime', monospace",
+                  fontSize: "11px",
+                  letterSpacing: "0.1em",
+                }}>
+                {cats.map(c => <option key={c}>{c}</option>)}
+              </select>
+              <input
+                value={newRule}
+                onChange={e => setNewRule(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && addRule()}
+                placeholder="New brand rule..."
+                style={{
+                  background: "rgba(212,201,168,0.04)",
+                  border: "1px solid rgba(212,201,168,0.12)",
+                  borderRadius: "2px",
+                  padding: "9px 14px",
+                  color: "#d4c9a8",
+                  fontFamily: "'Courier Prime', monospace",
+                  fontSize: "12px",
+                }}
+              />
+              <button className="add-btn" onClick={addRule} style={{
+                padding: "9px 20px",
+                background: "transparent",
+                border: "1px solid rgba(212,201,168,0.25)",
+                color: "#d4c9a8",
+                fontFamily: "'Courier Prime', monospace",
+                fontSize: "11px",
+                letterSpacing: "0.1em",
+                borderRadius: "2px",
+              }}>ADD</button>
+            </div>
+          </div>
+
+          {/* Validator */}
+          <div style={{
+            border: "1px solid rgba(196,120,60,0.25)",
+            borderRadius: "4px",
+            overflow: "hidden",
+          }}>
+            <div style={{
+              padding: "14px 20px",
+              background: "rgba(196,120,60,0.08)",
+              borderBottom: "1px solid rgba(196,120,60,0.15)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}>
+              <div>
+                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "16px", color: "#c4783c", letterSpacing: "0.04em" }}>
+                  Constitutional Validator
+                </div>
+                <div style={{ fontSize: "10px", color: "rgba(212,201,168,0.35)", marginTop: "2px" }}>
+                  Paste any content — Claude checks it against frozen rules
+                </div>
+              </div>
+              <button
+                className="validate-btn"
+                onClick={validate}
+                disabled={validating || !testContent.trim()}
+                style={{
+                  padding: "8px 20px",
+                  background: "transparent",
+                  border: "1px solid #c4783c",
+                  color: "#c4783c",
+                  fontFamily: "'Courier Prime', monospace",
+                  fontSize: "11px",
+                  letterSpacing: "0.12em",
+                  borderRadius: "2px",
+                }}>
+                {validating ? "CHECKING…" : "VALIDATE"}
+              </button>
+            </div>
+
+            <div style={{ padding: "20px" }}>
+              <textarea
+                value={testContent}
+                onChange={e => setTestContent(e.target.value)}
+                placeholder="Paste caption, script, post copy, email — anything that will be published as SimAI..."
+                rows={4}
+                style={{
+                  width: "100%",
+                  background: "rgba(212,201,168,0.03)",
+                  border: "1px solid rgba(212,201,168,0.1)",
+                  borderRadius: "3px",
+                  padding: "12px 14px",
+                  color: "#d4c9a8",
+                  fontFamily: "'Courier Prime', monospace",
+                  fontSize: "12px",
+                  lineHeight: 1.6,
+                  resize: "vertical",
+                }}
+              />
+            </div>
+
+            {verdict && !verdict.error && (
+              <div style={{ padding: "0 20px 20px", animation: "fadeIn 0.4s ease" }}>
+                {/* Score */}
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "16px",
+                  marginBottom: "20px",
+                  padding: "14px 18px",
+                  background: verdict.pass ? "rgba(0,255,136,0.06)" : "rgba(255,80,60,0.06)",
+                  border: `1px solid ${verdict.pass ? "rgba(0,255,136,0.2)" : "rgba(255,80,60,0.2)"}`,
+                  borderRadius: "3px",
+                }}>
+                  <div style={{
+                    fontFamily: "'Playfair Display', serif",
+                    fontSize: "40px",
+                    fontWeight: 900,
+                    color: verdict.pass ? "#00ff88" : "#ff503c",
+                    lineHeight: 1,
+                  }}>{verdict.score}</div>
+                  <div>
+                    <div style={{ fontSize: "14px", color: verdict.pass ? "#00ff88" : "#ff503c", letterSpacing: "0.1em", fontWeight: 700 }}>
+                      {verdict.pass ? "✓ CONSTITUTIONAL" : "✗ VIOLATIONS FOUND"}
+                    </div>
+                    <div style={{ fontSize: "10px", color: "rgba(212,201,168,0.4)", marginTop: "3px" }}>
+                      {verdict.violations?.length || 0} violations · {verdict.compliant_elements?.length || 0} compliant elements
+                    </div>
+                  </div>
+                </div>
+
+                {verdict.violations?.length > 0 && (
+                  <div style={{ marginBottom: "16px" }}>
+                    <div style={{ fontSize: "9px", letterSpacing: "0.18em", color: "rgba(212,201,168,0.35)", marginBottom: "10px" }}>VIOLATIONS</div>
+                    {verdict.violations.map((v, i) => (
+                      <div key={i} style={{
+                        marginBottom: "8px",
+                        padding: "12px 14px",
+                        background: "rgba(255,80,60,0.05)",
+                        border: "1px solid rgba(255,80,60,0.15)",
+                        borderRadius: "2px",
+                        fontSize: "12px",
+                      }}>
+                        <div style={{ color: "#ff503c", marginBottom: "4px", letterSpacing: "0.06em" }}>[{v.rule_category}] {v.issue}</div>
+                        <div style={{ color: "rgba(212,201,168,0.5)" }}>→ {v.fix}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {verdict.revised_version && (
+                  <div>
+                    <div style={{ fontSize: "9px", letterSpacing: "0.18em", color: "rgba(212,201,168,0.35)", marginBottom: "8px" }}>CONSTITUTIONAL REVISION</div>
+                    <div style={{
+                      padding: "14px 16px",
+                      background: "rgba(196,120,60,0.06)",
+                      border: "1px solid rgba(196,120,60,0.2)",
+                      borderRadius: "2px",
+                      fontSize: "13px",
+                      lineHeight: 1.6,
+                      color: "#d4c9a8",
+                      fontStyle: "italic",
+                    }}>
+                      {verdict.revised_version}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+        </div>
+      </div>
+    </>
+  );
+}

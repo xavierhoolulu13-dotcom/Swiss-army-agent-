@@ -1,0 +1,472 @@
+import { useState, useEffect, useRef } from "react";
+
+const plans = [
+  {
+    id: "nano",
+    label: "NANO·SIM",
+    badge: "STARTER",
+    price: { monthly: 29, annual: 19 },
+    color: "#00c8ff",
+    glow: "rgba(0,200,255,0.3)",
+    tasks: "100",
+    lanes: "2",
+    vectors: "10K",
+    workflows: "3",
+    memory: "Short-term only",
+    support: "Async",
+    extras: ["Amanda Q&A", "2 n8n workflows", "Telegram bot"],
+  },
+  {
+    id: "micro",
+    label: "MICRO·SIM",
+    badge: "PRO",
+    price: { monthly: 99, annual: 69 },
+    color: "#00ff88",
+    glow: "rgba(0,255,136,0.3)",
+    tasks: "1,000",
+    lanes: "5",
+    vectors: "500K",
+    workflows: "10",
+    memory: "Qdrant long-term",
+    support: "Priority",
+    extras: ["Full Amanda stack", "HeyGen avatar", "RSIS808 MRR", "Beast Mode"],
+    featured: true,
+  },
+  {
+    id: "full",
+    label: "FULL·SIM",
+    badge: "UNLIMITED",
+    price: { monthly: 299, annual: 199 },
+    color: "#ff6b00",
+    glow: "rgba(255,107,0,0.3)",
+    tasks: "∞",
+    lanes: "8",
+    vectors: "∞",
+    workflows: "∞",
+    memory: "Qdrant + NocoDB",
+    support: "White-glove",
+    extras: ["All 19 n8n workflows", "xos-v3 deploy", "MCP threat intel", "25-platform crosspost"],
+  },
+];
+
+const SignalBars = ({ color, strength = 4 }) => (
+  <div style={{ display: "flex", alignItems: "flex-end", gap: "3px", height: "18px" }}>
+    {[1, 2, 3, 4].map((i) => (
+      <div
+        key={i}
+        style={{
+          width: "5px",
+          height: `${4 + i * 3}px`,
+          background: i <= strength ? color : "rgba(255,255,255,0.12)",
+          borderRadius: "1px",
+          transition: "background 0.4s",
+        }}
+      />
+    ))}
+  </div>
+);
+
+const ScanLine = () => (
+  <div
+    style={{
+      position: "absolute",
+      inset: 0,
+      background:
+        "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.012) 2px, rgba(255,255,255,0.012) 4px)",
+      pointerEvents: "none",
+      zIndex: 1,
+    }}
+  />
+);
+
+const WaveCanvas = () => {
+  const ref = useRef(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    const ctx = canvas.getContext("2d");
+    let frame = 0;
+    const waves = [
+      { amp: 18, freq: 0.018, speed: 0.022, color: "rgba(0,200,255,0.13)", y: 0.45 },
+      { amp: 12, freq: 0.025, speed: 0.031, color: "rgba(0,255,136,0.09)", y: 0.55 },
+      { amp: 22, freq: 0.012, speed: 0.016, color: "rgba(255,107,0,0.07)", y: 0.5 },
+    ];
+    let raf;
+    const draw = () => {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      waves.forEach((w) => {
+        ctx.beginPath();
+        ctx.strokeStyle = w.color;
+        ctx.lineWidth = 1.5;
+        for (let x = 0; x <= canvas.width; x += 2) {
+          const y = canvas.height * w.y + Math.sin(x * w.freq + frame * w.speed) * w.amp;
+          x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      });
+      frame++;
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  return (
+    <canvas
+      ref={ref}
+      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
+    />
+  );
+};
+
+export default function SimAITelecom() {
+  const [billing, setBilling] = useState("monthly");
+  const [selected, setSelected] = useState("micro");
+  const [activeStat, setActiveStat] = useState(0);
+
+  const stats = [
+    { label: "AI COVERAGE", value: "GLOBAL", unit: "" },
+    { label: "UPTIME", value: "99.97", unit: "%" },
+    { label: "LATENCY", value: "<40", unit: "ms" },
+    { label: "ACTIVE NODES", value: "2,847", unit: "" },
+  ];
+
+  useEffect(() => {
+    const t = setInterval(() => setActiveStat((p) => (p + 1) % stats.length), 2200);
+    return () => clearInterval(t);
+  }, []);
+
+  const css = `
+    @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;600;700;900&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #05080e; }
+    .sim-wrap { font-family: 'IBM Plex Mono', monospace; background: #05080e; min-height: 100vh; color: #d8eaf0; overflow-x: hidden; }
+    .display { font-family: 'Barlow Condensed', sans-serif; }
+    @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.2} }
+    @keyframes ticker { 0%{transform:translateY(0)} 100%{transform:translateY(-100%)} }
+    @keyframes fadeup { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+    .plan-card { transition: transform 0.25s, box-shadow 0.25s; }
+    .plan-card:hover { transform: translateY(-4px); }
+    .toggle-btn { transition: background 0.2s, color 0.2s; cursor: pointer; border: none; }
+    .select-btn { cursor: pointer; border: none; transition: all 0.2s; }
+    .select-btn:hover { filter: brightness(1.15); }
+  `;
+
+  return (
+    <>
+      <style>{css}</style>
+      <div className="sim-wrap">
+
+        {/* TOP BAR */}
+        <div style={{
+          background: "#080c14",
+          borderBottom: "1px solid rgba(0,200,255,0.15)",
+          padding: "0 24px",
+          height: "36px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          fontSize: "10px",
+          letterSpacing: "0.12em",
+          color: "rgba(216,234,240,0.45)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+              <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#00ff88", animation: "pulse-dot 1.4s infinite", display: "inline-block" }} />
+              NETWORK ACTIVE
+            </span>
+            <span>REGION: GLOBAL·AI</span>
+          </div>
+          <div style={{ display: "flex", gap: "20px" }}>
+            {stats.map((s, i) => (
+              <span key={i} style={{
+                color: i === activeStat ? "#00c8ff" : "rgba(216,234,240,0.35)",
+                transition: "color 0.5s",
+                fontWeight: i === activeStat ? "500" : "300",
+              }}>
+                {s.label}: <span style={{ color: i === activeStat ? "#00ff88" : "inherit" }}>{s.value}{s.unit}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* HERO */}
+        <div style={{ position: "relative", padding: "64px 24px 72px", textAlign: "center", overflow: "hidden" }}>
+          <WaveCanvas />
+          <ScanLine />
+          <div style={{ position: "relative", zIndex: 2 }}>
+            {/* Logo */}
+            <div className="display" style={{
+              fontSize: "11px",
+              letterSpacing: "0.35em",
+              color: "#00c8ff",
+              marginBottom: "20px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "12px",
+            }}>
+              <SignalBars color="#00c8ff" strength={4} />
+              SIM·AI WIRELESS
+              <SignalBars color="#00c8ff" strength={4} />
+            </div>
+
+            <h1 className="display" style={{
+              fontSize: "clamp(52px, 10vw, 96px)",
+              fontWeight: 900,
+              lineHeight: 0.9,
+              letterSpacing: "-0.01em",
+              marginBottom: "8px",
+              background: "linear-gradient(135deg, #ffffff 0%, #00c8ff 50%, #00ff88 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}>
+              AI BANDWIDTH<br />FOR YOUR STACK
+            </h1>
+
+            <div className="display" style={{
+              fontSize: "clamp(13px, 2.5vw, 18px)",
+              letterSpacing: "0.22em",
+              color: "rgba(216,234,240,0.5)",
+              marginBottom: "40px",
+              marginTop: "12px",
+            }}>
+              POWERED BY AMANDA · RSIS808 · XOS-V3
+            </div>
+
+            {/* 5G Badge */}
+            <div style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "10px",
+              background: "rgba(0,200,255,0.08)",
+              border: "1px solid rgba(0,200,255,0.25)",
+              borderRadius: "4px",
+              padding: "8px 20px",
+              fontSize: "11px",
+              letterSpacing: "0.18em",
+              color: "#00c8ff",
+            }}>
+              <span style={{
+                background: "#00c8ff",
+                color: "#05080e",
+                fontWeight: 700,
+                padding: "2px 7px",
+                borderRadius: "2px",
+                fontSize: "10px",
+                fontFamily: "'Barlow Condensed', sans-serif",
+                letterSpacing: "0.1em",
+              }}>5G·AI</span>
+              NOW AVAILABLE IN YOUR MONOREPO
+            </div>
+          </div>
+        </div>
+
+        {/* BILLING TOGGLE */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: "48px", position: "relative", zIndex: 2 }}>
+          <div style={{
+            display: "flex",
+            background: "#0b1018",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: "4px",
+            overflow: "hidden",
+            fontSize: "11px",
+            letterSpacing: "0.14em",
+          }}>
+            {["monthly", "annual"].map((b) => (
+              <button
+                key={b}
+                className="toggle-btn"
+                onClick={() => setBilling(b)}
+                style={{
+                  padding: "10px 28px",
+                  background: billing === b ? "#00c8ff" : "transparent",
+                  color: billing === b ? "#05080e" : "rgba(216,234,240,0.45)",
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: "11px",
+                  letterSpacing: "0.14em",
+                  fontWeight: billing === b ? "500" : "300",
+                }}>
+                {b.toUpperCase()}{b === "annual" && <span style={{ marginLeft: "6px", background: "#00ff88", color: "#05080e", padding: "1px 5px", borderRadius: "2px", fontSize: "9px" }}>–32%</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* PLANS */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+          gap: "20px",
+          maxWidth: "960px",
+          margin: "0 auto",
+          padding: "0 24px 80px",
+        }}>
+          {plans.map((plan) => {
+            const isSel = selected === plan.id;
+            return (
+              <div
+                key={plan.id}
+                className="plan-card"
+                onClick={() => setSelected(plan.id)}
+                style={{
+                  background: isSel ? `linear-gradient(145deg, #0d1520, #111a26)` : "#090e17",
+                  border: `1px solid ${isSel ? plan.color : "rgba(255,255,255,0.07)"}`,
+                  borderRadius: "8px",
+                  padding: "28px 24px",
+                  position: "relative",
+                  boxShadow: isSel ? `0 0 40px ${plan.glow}, 0 20px 40px rgba(0,0,0,0.5)` : "0 4px 20px rgba(0,0,0,0.3)",
+                  cursor: "pointer",
+                  overflow: "hidden",
+                }}>
+
+                {plan.featured && (
+                  <div style={{
+                    position: "absolute",
+                    top: "14px",
+                    right: "-22px",
+                    background: plan.color,
+                    color: "#05080e",
+                    fontSize: "9px",
+                    fontWeight: 700,
+                    letterSpacing: "0.15em",
+                    padding: "4px 36px",
+                    transform: "rotate(35deg)",
+                    fontFamily: "'Barlow Condensed', sans-serif",
+                  }}>MOST POPULAR</div>
+                )}
+
+                {/* Plan header */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+                  <div>
+                    <div className="display" style={{
+                      fontSize: "22px",
+                      fontWeight: 700,
+                      letterSpacing: "0.06em",
+                      color: plan.color,
+                    }}>{plan.label}</div>
+                    <div style={{
+                      fontSize: "9px",
+                      letterSpacing: "0.2em",
+                      color: "rgba(216,234,240,0.35)",
+                      marginTop: "2px",
+                    }}>{plan.badge}</div>
+                  </div>
+                  <SignalBars color={plan.color} strength={plan.id === "nano" ? 2 : plan.id === "micro" ? 3 : 4} />
+                </div>
+
+                {/* Price */}
+                <div style={{ marginBottom: "24px" }}>
+                  <div className="display" style={{
+                    fontSize: "52px",
+                    fontWeight: 900,
+                    lineHeight: 1,
+                    color: "#ffffff",
+                    letterSpacing: "-0.02em",
+                  }}>
+                    ${plan.price[billing]}
+                    <span style={{ fontSize: "16px", fontWeight: 400, color: "rgba(216,234,240,0.35)", letterSpacing: "0em" }}>/mo</span>
+                  </div>
+                  {billing === "annual" && (
+                    <div style={{ fontSize: "10px", color: "#00ff88", letterSpacing: "0.1em", marginTop: "4px" }}>
+                      BILLED ${plan.price.annual * 12}/YR · SAVE ${(plan.price.monthly - plan.price.annual) * 12}
+                    </div>
+                  )}
+                </div>
+
+                {/* Specs */}
+                <div style={{
+                  background: "rgba(0,0,0,0.25)",
+                  borderRadius: "4px",
+                  padding: "14px",
+                  marginBottom: "20px",
+                  display: "grid",
+                  gap: "10px",
+                  fontSize: "11px",
+                }}>
+                  {[
+                    ["AMANDA TASKS/MO", plan.tasks],
+                    ["PIPELINE LANES", plan.lanes],
+                    ["QDRANT VECTORS", plan.vectors],
+                    ["N8N WORKFLOWS", plan.workflows],
+                    ["MEMORY", plan.memory],
+                    ["SUPPORT", plan.support],
+                  ].map(([k, v]) => (
+                    <div key={k} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ color: "rgba(216,234,240,0.4)", letterSpacing: "0.1em", fontSize: "10px" }}>{k}</span>
+                      <span style={{ color: plan.color, fontWeight: 500 }}>{v}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Extras */}
+                <div style={{ marginBottom: "24px", display: "grid", gap: "6px" }}>
+                  {plan.extras.map((e) => (
+                    <div key={e} style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      fontSize: "11px",
+                      color: "rgba(216,234,240,0.6)",
+                    }}>
+                      <span style={{ color: plan.color, fontSize: "14px", lineHeight: 1 }}>+</span>
+                      {e}
+                    </div>
+                  ))}
+                </div>
+
+                {/* CTA */}
+                <button
+                  className="select-btn"
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    background: isSel ? plan.color : "transparent",
+                    color: isSel ? "#05080e" : plan.color,
+                    border: `1px solid ${plan.color}`,
+                    borderRadius: "4px",
+                    fontFamily: "'Barlow Condensed', sans-serif",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    letterSpacing: "0.18em",
+                  }}>
+                  {isSel ? "✓ SELECTED" : "ACTIVATE SIM"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* BOTTOM TICKER */}
+        <div style={{
+          borderTop: "1px solid rgba(255,255,255,0.07)",
+          background: "#080c14",
+          padding: "0 24px",
+          height: "32px",
+          display: "flex",
+          alignItems: "center",
+          gap: "40px",
+          overflow: "hidden",
+          fontSize: "9px",
+          letterSpacing: "0.18em",
+          color: "rgba(216,234,240,0.3)",
+          whiteSpace: "nowrap",
+        }}>
+          {Array(4).fill([
+            "· AMANDA ORCHESTRATION KERNEL ACTIVE",
+            "· RSIS808 MRR ENGINE ONLINE",
+            "· BEAST MODE STANDING BY",
+            "· QDRANT VECTORS INDEXED",
+            "· 19 N8N WORKFLOWS RUNNING",
+            "· XOS-V3 CORE FROZEN",
+            "· 25-PLATFORM CROSSPOST ARMED",
+          ]).flat().map((t, i) => (
+            <span key={i}>{t}</span>
+          ))}
+        </div>
+
+      </div>
+    </>
+  );
+}

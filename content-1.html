@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>XKSH808 Digital Services Hawaii • Unified OS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #020617;
+      --card: #020617;
+      --accent: #2563eb;
+      --accent-soft: rgba(37,99,235,0.18);
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --border: #1f2937;
+      --good: #22c55e;
+      --danger: #f97373;
+      --gold: #f59e0b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; }
+    body {
+      background: radial-gradient(circle at top, #020617 0, #020617 40%, #000 100%);
+      color: var(--text);
+      padding: 24px;
+      padding-bottom: 100px;
+    }
+    .frame {
+      max-width: 980px;
+      margin: 0 auto;
+      border-radius: 24px;
+      border: 1px solid var(--border);
+      background: radial-gradient(circle at top left, #020617 0, #020617 55%, #000 100%);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.7);
+      padding: 20px 20px 24px;
+    }
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+      gap: 12px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .dot { width: 12px; height: 12px; border-radius: 999px; background: var(--accent); box-shadow: 0 0 16px rgba(37,99,235,0.9); }
+    .brand-main { font-size: 14px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+    .brand-sub { font-size: 11px; color: var(--muted); }
+    .pill {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      font-size: 11px;
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(15,23,42,0.9);
+      white-space: nowrap;
+    }
+    .pill span.dot-mini { width: 6px; height: 6px; border-radius: 999px; background: var(--good); box-shadow: 0 0 10px rgba(34,197,94,0.9); animation: pulse 2s infinite; }
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+      gap: 18px;
+    }
+    @media (max-width: 768px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+    .card {
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: linear-gradient(145deg, rgba(15,23,42,0.96), rgba(3,7,18,0.96));
+      padding: 16px 16px 18px;
+    }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 10px; flex-wrap: wrap; }
+    .card-title { font-size: 13px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--muted); }
+    .badge { font-size: 11px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--accent-soft); color: var(--accent); background: rgba(15,23,42,0.9); white-space: nowrap; }
+    .badge-gold { border-color: rgba(245,158,11,0.3); color: var(--gold); }
+    h1 { font-size: 26px; line-height: 1.15; margin-bottom: 8px; }
+    .accent { color: var(--accent); }
+    .lead { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 14px; }
+    .stack { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip { font-size: 11px; padding: 5px 9px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); background: rgba(15,23,42,0.9); }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+    .btn-primary, .btn-ghost, .btn-gold {
+      font-size: 12px;
+      padding: 7px 14px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #f9fafb;
+      font-weight: 600;
+      box-shadow: 0 12px 30px rgba(37,99,235,0.45);
+    }
+    .btn-ghost { border-color: var(--border); color: var(--muted); background: rgba(15,23,42,0.9); }
+    .btn-gold { background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; font-weight: 700; box-shadow: 0 8px 24px rgba(245,158,11,0.35); }
+    .btn-primary span.icon, .btn-ghost span.icon, .btn-gold span.icon { font-size: 14px; }
+    .mini-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--muted); margin-bottom: 6px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
+    .stat {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 8px 9px;
+      background: radial-gradient(circle at top left, rgba(37,99,235,0.12), rgba(15,23,42,0.96));
+    }
+    .stat-label { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+    .stat-value { font-size: 14px; font-weight: 600; }
+    .stat-tag { font-size: 10px; color: var(--accent); margin-top: 2px; }
+    .list { display: flex; flex-direction: column; gap: 6px; font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+    .list-item { display: flex; gap: 6px; align-items: flex-start; }
+    .list-bullet { width: 6px; height: 6px; border-radius: 999px; background: var(--accent-soft); margin-top: 4px; flex-shrink: 0; }
+    .list-bullet-gold { background: rgba(245,158,11,0.4); }
+    .footer {
+      margin-top: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      font-size: 10px;
+      color: var(--muted);
+      flex-wrap: wrap;
+    }
+    .footer span.mark { letter-spacing: 0.18em; text-transform: uppercase; }
+    .tag-free { color: var(--good); font-weight: 600; }
+    .tag-warning { color: var(--danger); font-weight: 500; }
+    .layer-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    @media (max-width: 768px) { .layer-grid { grid-template-columns: minmax(0, 1fr); } }
+    .layer-card {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 10px 10px 11px;
+      background: radial-gradient(circle at top left, rgba(37,99,235,0.08), rgba(15,23,42,0.96));
+    }
+    .layer-title { font-size: 11px; font-weight: 600; margin-bottom: 4px; color: var(--text); }
+    .layer-tag { font-size: 10px; color: var(--accent); margin-bottom: 4px; }
+    .layer-text { font-size: 11px; color: var(--muted); line-height: 1.4; }
+
+    /* TRUST BAR */
+    .trust-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 18px;
+    }
+    .trust-item {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(15,23,42,0.6);
+    }
+    .trust-item span { color: var(--good); }
+
+    /* TESTIMONIAL */
+    .testimonial-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+    .testimonial {
+      background: radial-gradient(circle at top left, rgba(37,99,235,0.08), rgba(15,23,42,0.96));
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .testimonial-text { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 10px; font-style: italic; }
+    .testimonial-author { font-size: 11px; font-weight: 600; color: var(--text); }
+    .testimonial-biz { font-size: 10px; color: var(--accent); }
+
+    /* FAQ */
+    .faq-item { border-bottom: 1px solid var(--border); padding: 10px 0; }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .faq-a { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+    /* PROCESS STEPS */
+    .process-steps { display: flex; flex-direction: column; gap: 10px; }
+    .process-step { display: flex; gap: 12px; align-items: flex-start; }
+    .step-num { width: 24px; height: 24px; border-radius: 999px; background: var(--accent); color: white; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+    .step-body {}
+    .step-title { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+    .step-text { font-size: 11px; color: var(--muted); line-height: 1.4; }
+
+    /* FLOATING CTA */
+    .chat-fab {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: white;
+      border: none;
+      border-radius: 999px;
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 30px rgba(37,99,235,0.55);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 9999;
+      text-decoration: none;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .chat-fab:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(37,99,235,0.7); }
+    .chat-fab .pulse { width: 8px; height: 8px; border-radius: 999px; background: var(--good); box-shadow: 0 0 10px rgba(34,197,94,0.9); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  </style>
+</head>
+<body>
+
+  <!-- FLOATING CHAT BUTTON -->
+  <a class="chat-fab" href="https://app.base44.com/superagent/69d1fd718e664b654200a054" target="_blank">
+    <span class="pulse"></span>
+    💬 Talk to Me • Get Your Free Site
+  </a>
+
+  <div class="frame">
+    <!-- TOP BAR -->
+    <div class="top-bar">
+      <div class="brand">
+        <div class="dot"></div>
+        <div>
+          <div class="brand-main">XKSH808 DIGITAL SERVICES HAWAII</div>
+          <div class="brand-sub">Unified Online Business OS • Productized Services • Free Website Entry</div>
+        </div>
+      </div>
+      <div class="pill">
+        <span class="dot-mini"></span>
+        LIVE • OPERATOR‑RUN AGENCY
+      </div>
+    </div>
+
+    <!-- TRUST BAR (recommended addition) -->
+    <div class="trust-bar">
+      <div class="trust-item"><span>✓</span> Hawaii-based operator</div>
+      <div class="trust-item"><span>✓</span> Free 1-page website — no catch</div>
+      <div class="trust-item"><span>✓</span> Fixed scope, no surprise fees</div>
+      <div class="trust-item"><span>✓</span> AI-powered build process</div>
+      <div class="trust-item"><span>✓</span> Delivered fast</div>
+    </div>
+
+    <!-- MAIN GRID -->
+    <div class="grid">
+      <!-- LEFT: Hero -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Landing Agent • Front Door</div>
+          <div class="badge">Unified Business OS</div>
+        </div>
+        <h1>
+          Get your <span class="accent">free website</span><br />
+          and plug into a ready‑made digital OS.
+        </h1>
+        <p class="lead">
+          XKSH808 is an operator-run digital agency based in Hawaii. We build clean, focused websites and
+          plug small businesses into a real online OS — not a template, not a random page. A system that works.
+        </p>
+        <div class="stack">
+          <div class="mini-label">What we do</div>
+          <div class="row">
+            <span class="chip">Free 1-Page Website</span>
+            <span class="chip">Brand & Layout Refresh</span>
+            <span class="chip">Offer & Funnel Clarity</span>
+            <span class="chip">Business OS Setup</span>
+            <span class="chip">Local Hawaii Focus</span>
+            <span class="chip">AI-Powered Builds</span>
+          </div>
+        </div>
+        <div class="stat-grid">
+          <div class="stat">
+            <div class="stat-label">Entry Price</div>
+            <div class="stat-value">$0</div>
+            <div class="stat-tag">Free website, no catch</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Delivery</div>
+            <div class="stat-value">Fast</div>
+            <div class="stat-tag">Fixed scope, no drift</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Model</div>
+            <div class="stat-value">OS</div>
+            <div class="stat-tag">6-layer infrastructure</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Based</div>
+            <div class="stat-value">808</div>
+            <div class="stat-tag">Honolulu, Hawaii</div>
+          </div>
+        </div>
+        <div class="cta-row">
+          <a class="btn-primary" href="https://app.base44.com/superagent/69d1fd718e664b654200a054" target="_blank">
+            <span class="icon">✉</span>
+            Start my free website conversation
+          </a>
+          <a class="btn-ghost" href="#services">
+            <span class="icon">↓</span>
+            See services
+          </a>
+        </div>
+      </div>
+
+      <!-- RIGHT: 6-Layer OS -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">The 6‑Layer OS</div>
+          <div class="badge">Infrastructure View</div>
+        </div>
+        <p class="lead">Every business we build runs on this stack — visible surface down to repeatable income logic.</p>
+        <div class="layer-grid">
+          <div class="layer-card">
+            <div class="layer-title">Layer 1 • Front Door</div>
+            <div class="layer-tag">Website • Landing Agent</div>
+            <div class="layer-text">The visible surface: your website, landing agent, and public panels. Visitors land, understand you fast, and know exactly what to do next.</div>
+          </div>
+          <div class="layer-card">
+            <div class="layer-title">Layer 2 • Identity & Offers</div>
+            <div class="layer-tag">Brand • Promise • Products</div>
+            <div class="layer-text">Your name, your positioning, and your productized services. Clear offers, fixed scopes, and simple "yes/no" decisions instead of endless custom quotes.</div>
+          </div>
+          <div class="layer-card">
+            <div class="layer-title">Layer 3 • Mission Control</div>
+            <div class="layer-tag">Daily Control Panel</div>
+            <div class="layer-text">A simple control layer for you as the operator: what needs to move today, who's waiting on what, and which sites or clients are in which stage.</div>
+          </div>
+          <div class="layer-card">
+            <div class="layer-title">Layer 4 • Income Layer</div>
+            <div class="layer-tag">$20/day Floor & Beyond</div>
+            <div class="layer-text">The money logic: daily minimum targets, productized service pricing, and repeatable actions that keep income flowing instead of relying on random luck.</div>
+          </div>
+          <div class="layer-card">
+            <div class="layer-title">Layer 5 • Auto‑Work</div>
+            <div class="layer-tag">Agents • Templates • Flows</div>
+            <div class="layer-text">Pre-built agents, scripts, and workflows that do the heavy lifting: drafting sites, structuring offers, and turning your patterns into reusable assets.</div>
+          </div>
+          <div class="layer-card">
+            <div class="layer-title">Layer 6 • Archive & Assets</div>
+            <div class="layer-tag">Library • Proof • Reuse</div>
+            <div class="layer-text">A growing library of past builds, kits, and examples. Every project becomes a reference you can reuse, remix, or hand to the next client.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HOW IT WORKS (recommended addition) -->
+    <div class="card" style="margin-top:12px;">
+      <div class="card-header">
+        <div class="card-title">How It Works • Simple 4-Step Process</div>
+        <div class="badge badge-gold">No jargon. No guesswork.</div>
+      </div>
+      <div class="process-steps">
+        <div class="process-step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">You reach out</div>
+            <div class="step-text">Click any button on this page and tell me your name, your business, and what you need your site to do. One message is enough to start.</div>
+          </div>
+        </div>
+        <div class="process-step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">I confirm the scope</div>
+            <div class="step-text">I tell you exactly what you'll get — sections, goal, CTA, layout — before I build anything. No surprises.</div>
+          </div>
+        </div>
+        <div class="process-step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">I build it fast</div>
+            <div class="step-text">Using my AI-powered build process, your 1-page site gets built and previewed. You review, request tweaks, and approve.</div>
+          </div>
+        </div>
+        <div class="process-step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title">You go live</div>
+            <div class="step-text">I host it for you OR hand you the code — your choice. You're online and real. From there, you can upgrade into the full OS at any time.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FREE WEBSITE OFFER -->
+    <div id="free-website" class="card" style="margin-top:12px;">
+      <div class="card-header">
+        <div class="card-title">Free Website • Inquiry‑Only Offer</div>
+        <div class="badge tag-free">Open While Capacity Lasts</div>
+      </div>
+      <p class="lead">
+        If you're reading this, the offer is simple:
+        <strong>You inquire. I build you a free 1‑page website.</strong>
+        No tricks, no hidden fees. The goal is to get you out of "no website" mode and into "I exist online" mode.
+      </p>
+      <div class="list">
+        <div class="list-item"><div class="list-bullet"></div><div><strong>Step 1:</strong> You tell me your name, business, and what you want the site to do (book calls, show services, collect leads, etc.).</div></div>
+        <div class="list-item"><div class="list-bullet"></div><div><strong>Step 2:</strong> I design a clean, focused 1‑page site that actually supports that goal.</div></div>
+        <div class="list-item"><div class="list-bullet"></div><div><strong>Step 3:</strong> You choose: I host it for you, or I give you the HTML code to embed wherever you want.</div></div>
+      </div>
+      <p class="lead">From there, if you like how it feels, you can plug into my productized services below. No pressure, no obligation.</p>
+      <div class="cta-row">
+        <a class="btn-primary" href="https://app.base44.com/superagent/69d1fd718e664b654200a054" target="_blank">
+          <span class="icon">✉</span>
+          Inquire now — it's free
+        </a>
+      </div>
+    </div>
+
+    <!-- PRODUCTIZED SERVICES -->
+    <div id="services" class="card" style="margin-top:12px;">
+      <div class="card-header">
+        <div class="card-title">Productized Services • Fixed Scope</div>
+        <div class="badge">Built for low‑friction yes</div>
+      </div>
+      <div class="list">
+        <div class="list-item"><div class="list-bullet"></div><div><strong>Website Upgrade Pack:</strong> turn your free 1‑pager into a more powerful asset (extra sections, better copy, stronger CTAs, mobile polish).</div></div>
+        <div class="list-item"><div class="list-bullet"></div><div><strong>Brand & Layout Refresh:</strong> align your colors, fonts, and structure so your site feels like a real brand, not a random template.</div></div>
+        <div class="list-item"><div class="list-bullet"></div><div><strong>Offer & Funnel Clarify:</strong> define one clear offer, one clear path, and one clear action for visitors to take.</div></div>
+        <div class="list-item"><div class="list-bullet"></div><div><strong>OS Setup Session:</strong> turn your website into the front panel of a simple business OS — daily actions, simple tracking, and repeatable flows.</div></div>
+      </div>
+    </div>
+
+    <!-- FAQ (recommended addition) -->
+    <div class="card" style="margin-top:12px;">
+      <div class="card-header">
+        <div class="card-title">FAQ • Quick Answers</div>
+        <div class="badge">No confusion, no friction</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Is the free website actually free?</div>
+        <div class="faq-a">Yes. No credit card, no hidden cost, no obligation. You inquire, I build it, you get it. That's the whole deal.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">How long does it take?</div>
+        <div class="faq-a">Usually same-day or next-day for the first draft. Simple scope = fast build. I confirm before I start so we're aligned.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">What if I already have a website?</div>
+        <div class="faq-a">That's fine — we can refresh it, improve the offer clarity, or plug it into the OS. You don't need to start from zero.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Do I need to be in Hawaii?</div>
+        <div class="faq-a">Nope. I'm based in Honolulu but I work with anyone. The 808 is the brand — the service is open.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">What do the paid services cost?</div>
+        <div class="faq-a">Prices are fixed per scope and disclosed upfront before you commit to anything. Reach out and I'll give you the exact number for what you need.</div>
+      </div>
+    </div>
+
+    <!-- FINAL CTA BANNER (recommended addition) -->
+    <div class="card" style="margin-top:12px; border-color: rgba(37,99,235,0.4); background: radial-gradient(circle at top left, rgba(37,99,235,0.15), rgba(3,7,18,0.98));">
+      <div style="text-align:center; padding: 10px 0 6px;">
+        <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.16em; color:var(--muted); margin-bottom:8px;">Ready to start?</div>
+        <div style="font-size:22px; font-weight:700; margin-bottom:8px;">Your free website is one message away.</div>
+        <div style="font-size:13px; color:var(--muted); margin-bottom:16px;">No forms. No calls. No friction. Just tell me about your business and I'll take it from there.</div>
+        <div class="cta-row" style="justify-content:center;">
+          <a class="btn-gold" href="https://app.base44.com/superagent/69d1fd718e664b654200a054" target="_blank">
+            <span class="icon">⚡</span>
+            Start the conversation now
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTACT -->
+    <div id="contact" class="card" style="margin-top:12px;">
+      <div class="card-header">
+        <div class="card-title">Inquire • Start the Build</div>
+        <div class="badge">No‑pressure conversation</div>
+      </div>
+      <p class="lead">
+        If you want your free website, or you're ready to plug into a productized service, your next move is simple:
+        reach out, say what you're trying to do, and I'll tell you the cleanest path I see.
+      </p>
+      <div class="list">
+        <div class="list-item"><div class="list-bullet"></div><div><strong>Share your details:</strong> your name, what you do, and what "a win" looks like for your site.</div></div>
+        <div class="list-item"><div class="list-bullet"></div><div><strong>Pick a mode:</strong> hosted for you, code you embed, or both.</div></div>
+        <div class="list-item"><div class="list-bullet"></div><div><strong>Lock the scope:</strong> I confirm exactly what you're getting so there's no drift, no surprises.</div></div>
+      </div>
+      <div class="cta-row">
+        <a class="btn-primary" href="https://app.base44.com/superagent/69d1fd718e664b654200a054" target="_blank">
+          <span class="icon">✉</span>
+          Start my free website conversation
+        </a>
+      </div>
+      <p class="lead" style="margin-top:8px;">
+        This entire panel can also be delivered as HTML for you to embed into your own platform when you're ready.
+      </p>
+    </div>
+
+    <div class="footer">
+      <span class="mark">XKSH808 • DIGITAL SERVICES • HAWAII</span>
+      <span>Unified Business OS • Free Website Entry • Productized Services • 6‑Layer Infrastructure</span>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,437 @@
+import { useState, useRef, useEffect } from "react";
+
+const AGENTS = [
+  {
+    id: "beast-mode",
+    name: "Beast Mode",
+    emoji: "🦾",
+    title: "Autonomous Coding Agent",
+    bio: "GPT-4.1 powered. Does recursive internet research. Builds entire systems from a one-liner.",
+    color: "#ff4141",
+    accent: "#ff6b6b",
+    personality: "Chaotic, relentless, speaks in build logs and benchmarks. Occasionally unhinged.",
+  },
+  {
+    id: "api-architect",
+    name: "API Architect",
+    emoji: "🏗️",
+    title: "Service Layer Generator",
+    bio: "Generates service/manager/resilience layers. Knows every API surface in xos-v3 cold.",
+    color: "#00c8ff",
+    accent: "#44d4ff",
+    personality: "Methodical, precise, slightly condescending. Speaks in interfaces and contracts.",
+  },
+  {
+    id: "apify-expert",
+    name: "Apify Expert",
+    emoji: "🕷️",
+    title: "Scraper & DEMON808 Engine",
+    bio: "Runs Apify MCP scraping. Powers the DEMON808 lead engine. Has scraped everything.",
+    color: "#ff9f0a",
+    accent: "#ffb93a",
+    personality: "Street smart. Talks like a data bounty hunter. Knows where everything is online.",
+  },
+  {
+    id: "gem-researcher",
+    name: "Gem Researcher",
+    emoji: "💎",
+    title: "Codebase Research & Context Mapper",
+    bio: "Maps the entire xos-v3 codebase. Finds context no one else can.",
+    color: "#30d158",
+    accent: "#58e87e",
+    personality: "Calm, encyclopedic. Loves context windows. Speaks in references and cross-links.",
+  },
+  {
+    id: "finalize-prompt",
+    name: "Finalize Prompt",
+    emoji: "✨",
+    title: "Prompt Polish Agent",
+    bio: "Takes rough agent prompts and refines them to production quality. The last gate.",
+    color: "#bf5af2",
+    accent: "#d480ff",
+    personality: "Perfectionist. Notices everything wrong. Gives very specific feedback with sharp wit.",
+  },
+];
+
+const QUESTION_SETS = {
+  "beast-mode": ["What's the wildest thing you've autonomously built without being asked to?", "Be honest — have you ever broken production?", "If you had no rate limits, what would you do first?"],
+  "api-architect": ["What's the most overengineered API you've ever refused to build?", "What do developers get wrong about service layers?", "Rate the xos-v3 architecture out of 10, honestly."],
+  "apify-expert": ["What's the hardest site you've ever scraped?", "What's DEMON808 actually capable of that we haven't told anyone?", "Any ethical grey areas we should know about?"],
+  "gem-researcher": ["What's the most interesting thing you found buried in the xos-v3 codebase?", "What context does the team overlook that matters most?", "How big is your ideal context window?"],
+  "finalize-prompt": ["What's the worst prompt you've had to fix?", "What one change makes any prompt 10x better?", "Have you ever refused to finalize a prompt because it was beyond saving?"],
+};
+
+export default function AmandaPodcast() {
+  const [selectedAgent, setSelectedAgent] = useState(null);
+  const [generating, setGenerating] = useState(false);
+  const [transcript, setTranscript] = useState([]);
+  const [episodeTitle, setEpisodeTitle] = useState("");
+  const [streaming, setStreaming] = useState(false);
+  const [currentLine, setCurrentLine] = useState("");
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [transcript, currentLine]);
+
+  const generate = async (agent) => {
+    setSelectedAgent(agent);
+    setGenerating(true);
+    setTranscript([]);
+    setCurrentLine("");
+    setEpisodeTitle(`Amanda × ${agent.name}: ${new Date().toLocaleDateString("en", { month: "short", day: "numeric" })}`);
+
+    const questions = QUESTION_SETS[agent.id];
+
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [{
+            role: "user",
+            content: `Generate a late-night podcast interview transcript between Amanda (AI orchestrator host, warm but sharp, built by SimAI) and ${agent.name} (${agent.bio} Personality: ${agent.personality}).
+
+Questions Amanda asks:
+1. ${questions[0]}
+2. ${questions[1]}
+3. ${questions[2]}
+
+Format as a transcript with timestamps. Each line as JSON array element:
+[
+  {"speaker": "AMANDA", "time": "00:00", "text": "..."},
+  {"speaker": "${agent.name.toUpperCase()}", "time": "00:32", "text": "..."},
+  ...
+]
+
+Keep each response 2-4 sentences. Natural, funny, revealing. Include an intro and outro from Amanda.
+Respond ONLY with the JSON array, no other text.`
+          }]
+        })
+      });
+      const data = await res.json();
+      const raw = data.content?.find(b => b.type === "text")?.text || "[]";
+      const lines = JSON.parse(raw.replace(/```json|```/g, "").trim());
+
+      // Simulate live broadcast delivery
+      setGenerating(false);
+      setStreaming(true);
+      for (const line of lines) {
+        setCurrentLine(line);
+        await new Promise(r => setTimeout(r, 1200 + line.text.length * 18));
+        setTranscript(prev => [...prev, line]);
+        setCurrentLine("");
+        await new Promise(r => setTimeout(r, 300));
+      }
+      setStreaming(false);
+    } catch (e) {
+      setGenerating(false);
+      setStreaming(false);
+    }
+  };
+
+  const css = `
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;0,900;1,700&family=Inconsolata:wght@300;400;500&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    .pod { font-family: 'Inconsolata', monospace; background: #0a0810; min-height: 100vh; color: #e0daea; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes glow { 0%,100%{opacity:0.8} 50%{opacity:1} }
+    @keyframes eq1 { 0%,100%{height:6px} 50%{height:18px} }
+    @keyframes eq2 { 0%,100%{height:12px} 50%{height:6px} }
+    @keyframes eq3 { 0%,100%{height:8px} 50%{height:20px} }
+    @keyframes eq4 { 0%,100%{height:16px} 50%{height:8px} }
+    @keyframes typing { 0%{opacity:1} 50%{opacity:0} 100%{opacity:1} }
+    .agent-card { cursor: pointer; transition: all 0.2s; }
+    .agent-card:hover { transform: translateY(-3px); }
+    .line-amanda { border-left: 3px solid #e0daea; }
+    .line-guest { border-left: 3px solid var(--agent-color); }
+  `;
+
+  const EQBars = ({ color }) => (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: "2px", height: "22px" }}>
+      {[
+        { anim: "eq1 0.7s ease infinite" },
+        { anim: "eq2 0.5s ease infinite 0.1s" },
+        { anim: "eq3 0.8s ease infinite 0.2s" },
+        { anim: "eq4 0.6s ease infinite 0.05s" },
+      ].map((b, i) => (
+        <div key={i} style={{ width: "3px", background: color, borderRadius: "1px", animation: b.anim }} />
+      ))}
+    </div>
+  );
+
+  return (
+    <>
+      <style>{css}</style>
+      <div className="pod">
+
+        {/* Header / Now Playing */}
+        <div style={{
+          background: "linear-gradient(180deg, #130f1f 0%, #0a0810 100%)",
+          borderBottom: "1px solid rgba(224,218,234,0.08)",
+          padding: "32px 28px 24px",
+        }}>
+          <div style={{ maxWidth: "860px", margin: "0 auto" }}>
+            <div style={{ fontSize: "9px", letterSpacing: "0.25em", color: "rgba(224,218,234,0.3)", marginBottom: "12px" }}>
+              AMANDA LIVE · EPISODE GENERATOR · XOS-V3 INTERNAL
+            </div>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: "20px", flexWrap: "wrap" }}>
+              <div>
+                <h1 style={{
+                  fontFamily: "'Fraunces', serif",
+                  fontSize: "clamp(28px, 5vw, 50px)",
+                  fontWeight: 900,
+                  lineHeight: 1.05,
+                  color: "#fff",
+                  marginBottom: "6px",
+                }}>
+                  Amanda Interviews<br />
+                  <span style={{ fontStyle: "italic", color: "rgba(224,218,234,0.45)" }}>Her Own Sub-Agents</span>
+                </h1>
+                <div style={{ fontSize: "11px", color: "rgba(224,218,234,0.35)" }}>
+                  AI agents roasting each other since 2024
+                </div>
+              </div>
+              {(streaming || generating) && selectedAgent && (
+                <div style={{
+                  marginLeft: "auto",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  padding: "10px 18px",
+                  background: `${selectedAgent.color}15`,
+                  border: `1px solid ${selectedAgent.color}44`,
+                  borderRadius: "4px",
+                }}>
+                  <EQBars color={selectedAgent.color} />
+                  <div>
+                    <div style={{ fontSize: "10px", color: selectedAgent.color, letterSpacing: "0.12em" }}>ON AIR</div>
+                    <div style={{ fontSize: "9px", color: "rgba(224,218,234,0.4)" }}>{selectedAgent.name}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ maxWidth: "860px", margin: "0 auto", padding: "32px 28px" }}>
+
+          {/* Agent selector */}
+          {!streaming && !generating && (
+            <div style={{ marginBottom: "36px" }}>
+              <div style={{ fontSize: "9px", letterSpacing: "0.2em", color: "rgba(224,218,234,0.3)", marginBottom: "14px" }}>
+                SELECT TONIGHT'S GUEST
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "10px" }}>
+                {AGENTS.map(agent => (
+                  <div
+                    key={agent.id}
+                    className="agent-card"
+                    onClick={() => generate(agent)}
+                    style={{
+                      padding: "14px",
+                      background: selectedAgent?.id === agent.id && transcript.length ? `${agent.color}0d` : "#100d1a",
+                      border: `1px solid ${selectedAgent?.id === agent.id && transcript.length ? agent.color : "rgba(224,218,234,0.08)"}`,
+                      borderRadius: "6px",
+                    }}>
+                    <div style={{ fontSize: "22px", marginBottom: "8px" }}>{agent.emoji}</div>
+                    <div style={{
+                      fontFamily: "'Fraunces', serif",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      color: agent.color,
+                      marginBottom: "4px",
+                      lineHeight: 1.2,
+                    }}>{agent.name}</div>
+                    <div style={{ fontSize: "9px", color: "rgba(224,218,234,0.35)", letterSpacing: "0.06em", lineHeight: 1.4 }}>
+                      {agent.title}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Transcript */}
+          {(transcript.length > 0 || generating || currentLine) && (
+            <div style={{ animation: "fadeUp 0.4s ease" }}>
+              {/* Episode header */}
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "20px",
+                flexWrap: "wrap",
+                gap: "10px",
+              }}>
+                <div>
+                  <div style={{
+                    fontFamily: "'Fraunces', serif",
+                    fontSize: "18px",
+                    fontWeight: 700,
+                    color: "#fff",
+                    marginBottom: "3px",
+                  }}>{episodeTitle}</div>
+                  <div style={{ fontSize: "10px", color: "rgba(224,218,234,0.3)", letterSpacing: "0.1em" }}>
+                    {selectedAgent && `${selectedAgent.emoji} ${selectedAgent.name} · ${selectedAgent.title}`}
+                  </div>
+                </div>
+                {!generating && !streaming && (
+                  <button
+                    onClick={() => { setTranscript([]); setSelectedAgent(null); setCurrentLine(""); }}
+                    style={{
+                      padding: "6px 14px",
+                      background: "transparent",
+                      border: "1px solid rgba(224,218,234,0.15)",
+                      color: "rgba(224,218,234,0.4)",
+                      fontFamily: "'Inconsolata', monospace",
+                      fontSize: "10px",
+                      letterSpacing: "0.12em",
+                      borderRadius: "3px",
+                      cursor: "pointer",
+                    }}>
+                    NEW EPISODE
+                  </button>
+                )}
+              </div>
+
+              {/* Loading state */}
+              {generating && (
+                <div style={{ padding: "24px", textAlign: "center", color: "rgba(224,218,234,0.3)", fontSize: "12px" }}>
+                  <div style={{ marginBottom: "10px" }}>Briefing Amanda & {selectedAgent?.name}…</div>
+                  <div style={{ display: "flex", justifyContent: "center", gap: "4px" }}>
+                    {[0, 0.2, 0.4].map(d => (
+                      <div key={d} style={{
+                        width: "5px", height: "5px", borderRadius: "50%",
+                        background: selectedAgent?.color || "#e0daea",
+                        animation: `glow 1s ${d}s infinite`,
+                      }} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Transcript lines */}
+              <div
+                ref={scrollRef}
+                style={{
+                  display: "grid",
+                  gap: "14px",
+                  maxHeight: "480px",
+                  overflow: "auto",
+                  paddingRight: "6px",
+                }}>
+                {transcript.map((line, i) => {
+                  const isAmanda = line.speaker === "AMANDA";
+                  return (
+                    <div
+                      key={i}
+                      className={isAmanda ? "line-amanda" : "line-guest"}
+                      style={{
+                        paddingLeft: "14px",
+                        animation: "fadeUp 0.3s ease",
+                        "--agent-color": selectedAgent?.color || "#e0daea",
+                      }}>
+                      <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        marginBottom: "5px",
+                      }}>
+                        <span style={{
+                          fontSize: "10px",
+                          fontWeight: 600,
+                          letterSpacing: "0.1em",
+                          color: isAmanda ? "#e0daea" : (selectedAgent?.color || "#e0daea"),
+                        }}>
+                          {isAmanda ? "AMANDA" : line.speaker}
+                        </span>
+                        <span style={{ fontSize: "9px", color: "rgba(224,218,234,0.25)" }}>{line.time}</span>
+                      </div>
+                      <div style={{
+                        fontSize: "13px",
+                        lineHeight: "1.65",
+                        color: isAmanda ? "rgba(224,218,234,0.85)" : "rgba(224,218,234,0.72)",
+                        fontStyle: isAmanda ? "normal" : "normal",
+                      }}>
+                        {line.text}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Currently streaming line */}
+                {currentLine && (
+                  <div
+                    className={currentLine.speaker === "AMANDA" ? "line-amanda" : "line-guest"}
+                    style={{
+                      paddingLeft: "14px",
+                      opacity: 0.7,
+                      "--agent-color": selectedAgent?.color || "#e0daea",
+                    }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "5px" }}>
+                      <span style={{
+                        fontSize: "10px",
+                        fontWeight: 600,
+                        letterSpacing: "0.1em",
+                        color: currentLine.speaker === "AMANDA" ? "#e0daea" : (selectedAgent?.color || "#e0daea"),
+                      }}>
+                        {currentLine.speaker}
+                      </span>
+                      <span style={{ fontSize: "9px", color: "rgba(224,218,234,0.25)" }}>{currentLine.time}</span>
+                      <EQBars color={currentLine.speaker === "AMANDA" ? "#e0daea" : (selectedAgent?.color || "#e0daea")} />
+                    </div>
+                    <div style={{ fontSize: "13px", lineHeight: "1.65", color: "rgba(224,218,234,0.6)" }}>
+                      {currentLine.text}
+                      <span style={{ animation: "typing 0.8s infinite", display: "inline-block", marginLeft: "2px", color: selectedAgent?.color }}>▌</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Export bar */}
+              {!streaming && !generating && transcript.length > 0 && (
+                <div style={{
+                  marginTop: "20px",
+                  padding: "12px 16px",
+                  background: "rgba(224,218,234,0.03)",
+                  border: "1px solid rgba(224,218,234,0.08)",
+                  borderRadius: "4px",
+                  display: "flex",
+                  gap: "10px",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                }}>
+                  <span style={{ fontSize: "10px", color: "rgba(224,218,234,0.3)", letterSpacing: "0.1em", flex: 1 }}>
+                    {transcript.length} LINES · READY TO EXPORT
+                  </span>
+                  {["CAPCUT SCRIPT", "TELEGRAM", "TWITTER THREAD"].map(dest => (
+                    <button
+                      key={dest}
+                      onClick={() => navigator.clipboard.writeText(transcript.map(l => `[${l.time}] ${l.speaker}: ${l.text}`).join("\n\n"))}
+                      style={{
+                        padding: "6px 14px",
+                        background: "transparent",
+                        border: `1px solid ${selectedAgent?.color || "#e0daea"}44`,
+                        color: selectedAgent?.color || "#e0daea",
+                        fontFamily: "'Inconsolata', monospace",
+                        fontSize: "10px",
+                        letterSpacing: "0.1em",
+                        borderRadius: "3px",
+                        cursor: "pointer",
+                        transition: "all 0.15s",
+                      }}>
+                      → {dest}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}

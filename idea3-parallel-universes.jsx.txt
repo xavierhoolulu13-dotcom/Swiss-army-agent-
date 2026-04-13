@@ -1,0 +1,394 @@
+import { useState, useEffect } from "react";
+
+const LANES = [
+  { id: 0, label: "BEAST", persona: "Raw, aggressive builder energy. No fluff. Punch hard.", color: "#ff4141" },
+  { id: 1, label: "HYPE", persona: "Maximum hype. Viral energy. Exclamation points. Hooks.", color: "#ff9f0a" },
+  { id: 2, label: "COLD", persona: "Ice cold CEO. Data only. Metrics. No emotion.", color: "#00c8ff" },
+  { id: 3, label: "STORY", persona: "Narrative storyteller. Hero's journey. Vulnerable.", color: "#bf5af2" },
+  { id: 4, label: "NERD", persona: "Deep tech. Code references. Architecture details. Jargon.", color: "#30d158" },
+  { id: 5, label: "VIRAL", persona: "Twitter/TikTok brained. Hot takes. Controversial angles.", color: "#ff375f" },
+  { id: 6, label: "TEACH", persona: "Educational thread style. Step by step. Clear and simple.", color: "#ffd60a" },
+  { id: 7, label: "CHAD", persona: "Unhinged confidence. We already won. Omnipotent energy.", color: "#00ff88" },
+];
+
+const FORMATS = ["Short-form post", "TikTok hook", "LinkedIn post", "Telegram blast", "Thread opener"];
+
+export default function ParallelUniverses() {
+  const [topic, setTopic] = useState("");
+  const [format, setFormat] = useState("Short-form post");
+  const [running, setRunning] = useState(false);
+  const [outputs, setOutputs] = useState({});
+  const [loadingLanes, setLoadingLanes] = useState([]);
+  const [winner, setWinner] = useState(null);
+  const [checkpoint, setCheckpoint] = useState(false);
+  const [shipped, setShipped] = useState(false);
+
+  const generate = async () => {
+    if (!topic.trim()) return;
+    setRunning(true);
+    setOutputs({});
+    setLoadingLanes(LANES.map(l => l.id));
+    setWinner(null);
+    setCheckpoint(false);
+    setShipped(false);
+
+    // Fire all 8 in parallel
+    const promises = LANES.map(async (lane) => {
+      try {
+        const res = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 1000,
+            messages: [{
+              role: "user",
+              content: `You are writing ${format} content for SimAI (AI infrastructure brand). 
+Persona: ${lane.persona}
+Topic: ${topic}
+
+Write a single piece of ${format} content in this exact persona. 
+Max 120 words. No labels or headers. Just the content itself.`
+            }]
+          })
+        });
+        const data = await res.json();
+        const text = data.content?.find(b => b.type === "text")?.text || "";
+        return { id: lane.id, text };
+      } catch {
+        return { id: lane.id, text: "[Generation failed]" };
+      }
+    });
+
+    // Stream results as they arrive
+    for (const promise of promises) {
+      const result = await promise;
+      setOutputs(prev => ({ ...prev, [result.id]: result.text }));
+      setLoadingLanes(prev => prev.filter(id => id !== result.id));
+    }
+
+    setCheckpoint(true);
+    setRunning(false);
+  };
+
+  const ship = () => {
+    if (winner === null) return;
+    setShipped(true);
+    setCheckpoint(false);
+  };
+
+  const completedCount = Object.keys(outputs).length;
+  const totalCount = LANES.length;
+
+  const css = `
+    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    .pu { font-family: 'JetBrains Mono', monospace; background: #060608; min-height: 100vh; color: #c8c8d8; }
+    @keyframes scanline { 0%{opacity:1} 50%{opacity:0.4} 100%{opacity:1} }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    @keyframes hitl { 0%{box-shadow:0 0 0 rgba(255,255,255,0)} 50%{box-shadow:0 0 30px rgba(255,215,0,0.3)} 100%{box-shadow:0 0 0 rgba(255,255,255,0)} }
+    .lane-card { transition: all 0.2s; cursor: pointer; }
+    .lane-card:hover { transform: scale(1.01); }
+    .run-btn, .ship-btn { cursor: pointer; border: none; transition: all 0.18s; }
+    .run-btn:hover:not(:disabled) { opacity: 0.85; }
+    .run-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .ship-btn:hover:not(:disabled) { filter: brightness(1.2); }
+    .ship-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    select { outline: none; cursor: pointer; }
+    textarea { outline: none; resize: none; caret-color: #c8c8d8; }
+    textarea::placeholder { color: #2a2a3a; }
+    .format-btn { cursor: pointer; border: none; transition: all 0.15s; }
+    .format-btn:hover { opacity: 0.8; }
+  `;
+
+  return (
+    <>
+      <style>{css}</style>
+      <div className="pu">
+
+        {/* Header */}
+        <div style={{
+          background: "#08080c",
+          borderBottom: "1px solid rgba(200,200,216,0.08)",
+          padding: "28px 28px 24px",
+          position: "relative",
+          overflow: "hidden",
+        }}>
+          <div style={{
+            position: "absolute",
+            top: 0, bottom: 0, left: 0,
+            width: `${(completedCount / totalCount) * 100}%`,
+            background: "linear-gradient(90deg, rgba(255,215,0,0.03), rgba(255,215,0,0.01))",
+            transition: "width 0.5s",
+            pointerEvents: "none",
+          }} />
+          <div style={{ maxWidth: "1100px", margin: "0 auto", position: "relative" }}>
+            <div style={{ fontSize: "9px", letterSpacing: "0.22em", color: "rgba(200,200,216,0.3)", marginBottom: "8px" }}>
+              XOS-V3 / EXTENSION / 8-LANE-PARALLEL
+            </div>
+            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
+              <h1 style={{
+                fontFamily: "'Rajdhani', sans-serif",
+                fontSize: "clamp(30px, 5vw, 52px)",
+                fontWeight: 700,
+                letterSpacing: "0.04em",
+                color: "#fff",
+                lineHeight: 1,
+              }}>
+                8 PARALLEL<br />
+                <span style={{ color: "rgba(200,200,216,0.3)" }}>UNIVERSES</span>
+              </h1>
+              <div style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "11px",
+                color: "rgba(200,200,216,0.3)",
+                textAlign: "right",
+              }}>
+                {running ? (
+                  <span style={{ color: "#ffd700" }}>GENERATING {completedCount}/{totalCount} <span style={{ animation: "blink 0.8s infinite", display: "inline-block" }}>▌</span></span>
+                ) : checkpoint ? (
+                  <span style={{ color: "#ffd700", animation: "hitl 1.5s infinite" }}>⚡ HITL CHECKPOINT — SELECT WINNER</span>
+                ) : shipped ? (
+                  <span style={{ color: "#00ff88" }}>✓ SHIPPED · LANE {winner + 1} · {LANES[winner].label}</span>
+                ) : (
+                  <span>LANES READY</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "28px" }}>
+
+          {/* Controls */}
+          <div style={{ display: "flex", gap: "12px", marginBottom: "12px", flexWrap: "wrap", alignItems: "flex-start" }}>
+            <textarea
+              value={topic}
+              onChange={e => setTopic(e.target.value)}
+              placeholder="Topic or brief..."
+              rows={2}
+              style={{
+                flex: "1 1 300px",
+                background: "#0c0c12",
+                border: "1px solid rgba(200,200,216,0.1)",
+                borderRadius: "4px",
+                padding: "12px 14px",
+                color: "#c8c8d8",
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "13px",
+                lineHeight: 1.5,
+              }}
+            />
+            <button
+              className="run-btn"
+              onClick={generate}
+              disabled={running || !topic.trim()}
+              style={{
+                padding: "12px 28px",
+                background: running ? "rgba(255,215,0,0.08)" : "#ffd700",
+                color: running ? "#ffd700" : "#060608",
+                border: "1px solid #ffd700",
+                borderRadius: "4px",
+                fontFamily: "'Rajdhani', sans-serif",
+                fontSize: "16px",
+                fontWeight: 700,
+                letterSpacing: "0.12em",
+                alignSelf: "stretch",
+              }}>
+              {running ? "FIRING ALL 8…" : "FIRE ALL LANES"}
+            </button>
+          </div>
+
+          {/* Format selector */}
+          <div style={{ display: "flex", gap: "6px", marginBottom: "28px", flexWrap: "wrap" }}>
+            {FORMATS.map(f => (
+              <button
+                key={f}
+                className="format-btn"
+                onClick={() => setFormat(f)}
+                style={{
+                  padding: "5px 12px",
+                  background: format === f ? "rgba(255,215,0,0.12)" : "transparent",
+                  border: `1px solid ${format === f ? "#ffd700" : "rgba(200,200,216,0.1)"}`,
+                  color: format === f ? "#ffd700" : "rgba(200,200,216,0.35)",
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "10px",
+                  letterSpacing: "0.1em",
+                  borderRadius: "3px",
+                }}>
+                {f}
+              </button>
+            ))}
+          </div>
+
+          {/* Lanes grid */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+            gap: "12px",
+            marginBottom: "24px",
+          }}>
+            {LANES.map(lane => {
+              const isLoading = loadingLanes.includes(lane.id);
+              const text = outputs[lane.id];
+              const isWinner = winner === lane.id;
+
+              return (
+                <div
+                  key={lane.id}
+                  className="lane-card"
+                  onClick={() => checkpoint && setWinner(lane.id)}
+                  style={{
+                    border: `1px solid ${isWinner ? lane.color : text ? `${lane.color}33` : "rgba(200,200,216,0.07)"}`,
+                    borderRadius: "6px",
+                    overflow: "hidden",
+                    background: isWinner ? `${lane.color}0f` : text ? "#0a0a10" : "#08080c",
+                    boxShadow: isWinner ? `0 0 24px ${lane.color}33` : "none",
+                    transition: "all 0.2s",
+                    opacity: checkpoint && winner !== null && !isWinner ? 0.5 : 1,
+                    animation: text && !isLoading ? "fadeUp 0.35s ease" : "none",
+                  }}>
+
+                  {/* Lane header */}
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "10px 12px",
+                    borderBottom: `1px solid ${lane.color}22`,
+                    background: `${lane.color}0a`,
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "9px", color: "rgba(200,200,216,0.3)" }}>
+                        {String(lane.id + 1).padStart(2, "0")}
+                      </span>
+                      <span style={{
+                        fontFamily: "'Rajdhani', sans-serif",
+                        fontSize: "15px",
+                        fontWeight: 700,
+                        letterSpacing: "0.1em",
+                        color: lane.color,
+                      }}>{lane.label}</span>
+                    </div>
+                    <div style={{ fontSize: "12px" }}>
+                      {isLoading && <span style={{ color: lane.color, animation: "blink 0.6s infinite" }}>▌</span>}
+                      {text && !isLoading && !isWinner && checkpoint && <span style={{ color: "rgba(200,200,216,0.3)", fontSize: "10px" }}>SELECT</span>}
+                      {isWinner && <span style={{ color: lane.color }}>✓ WINNER</span>}
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div style={{
+                    padding: "14px 12px",
+                    fontSize: "11px",
+                    lineHeight: "1.65",
+                    color: text ? "rgba(200,200,216,0.8)" : "rgba(200,200,216,0.15)",
+                    minHeight: "100px",
+                  }}>
+                    {isLoading ? (
+                      <div style={{ display: "flex", gap: "4px", paddingTop: "8px" }}>
+                        {[0, 0.2, 0.4].map(d => (
+                          <div key={d} style={{
+                            width: "4px", height: "4px", borderRadius: "50%",
+                            background: lane.color,
+                            animation: `blink 0.9s ${d}s infinite`,
+                          }} />
+                        ))}
+                      </div>
+                    ) : text || "Waiting for lane…"}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* HITL Checkpoint bar */}
+          {checkpoint && (
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "16px",
+              padding: "16px 20px",
+              background: "rgba(255,215,0,0.06)",
+              border: "1px solid rgba(255,215,0,0.3)",
+              borderRadius: "6px",
+              animation: "hitl 2s infinite",
+            }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: "16px", fontWeight: 700, color: "#ffd700", letterSpacing: "0.1em" }}>
+                  ⚡ LANE 05 — HUMAN IN THE LOOP
+                </div>
+                <div style={{ fontSize: "11px", color: "rgba(200,200,216,0.4)", marginTop: "3px" }}>
+                  {winner !== null
+                    ? `Lane ${winner + 1} (${LANES[winner].label}) selected — ready to ship`
+                    : "Click a card to select the winning universe"}
+                </div>
+              </div>
+              <button
+                className="ship-btn"
+                onClick={ship}
+                disabled={winner === null}
+                style={{
+                  padding: "10px 28px",
+                  background: winner !== null ? "#ffd700" : "transparent",
+                  color: winner !== null ? "#060608" : "#ffd700",
+                  border: "1px solid #ffd700",
+                  borderRadius: "4px",
+                  fontFamily: "'Rajdhani', sans-serif",
+                  fontSize: "16px",
+                  fontWeight: 700,
+                  letterSpacing: "0.12em",
+                }}>
+                SHIP IT
+              </button>
+            </div>
+          )}
+
+          {/* Shipped state */}
+          {shipped && winner !== null && (
+            <div style={{
+              padding: "20px 24px",
+              background: `${LANES[winner].color}0d`,
+              border: `1px solid ${LANES[winner].color}44`,
+              borderRadius: "6px",
+              animation: "fadeUp 0.4s ease",
+            }}>
+              <div style={{
+                fontFamily: "'Rajdhani', sans-serif",
+                fontSize: "20px",
+                fontWeight: 700,
+                color: LANES[winner].color,
+                letterSpacing: "0.1em",
+                marginBottom: "10px",
+              }}>
+                ✓ UNIVERSE {winner + 1} SHIPPED — {LANES[winner].label}
+              </div>
+              <div style={{
+                fontSize: "13px",
+                lineHeight: 1.65,
+                color: "rgba(200,200,216,0.8)",
+                background: "rgba(0,0,0,0.3)",
+                padding: "14px",
+                borderRadius: "4px",
+              }}>
+                {outputs[winner]}
+              </div>
+              <div style={{
+                marginTop: "12px",
+                fontSize: "10px",
+                color: "rgba(200,200,216,0.25)",
+                display: "flex",
+                gap: "20px",
+              }}>
+                <span>FORMAT: {format.toUpperCase()}</span>
+                <span>LANE: {LANES[winner].label}</span>
+                <span>PERSONA: {LANES[winner].persona.slice(0, 40)}…</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
